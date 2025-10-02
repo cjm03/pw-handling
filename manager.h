@@ -2,6 +2,7 @@
 #define MANAGER_H
 
 #include <stdint.h>
+#include "storage.h"
 
 int uGenSalt(uint8_t* buffer, int bytes);
 
