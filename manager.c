@@ -132,7 +132,7 @@ char* verifyArgon(uint8_t* password, uint8_t* salt)
     return ret;
 }
 
-void verifyEncodedArgon(char* encoded)
+int verifyEncodedArgon(char* encoded)
 {
     char pass[64];
     if (readpassphrase("\npwm>> password: ", pass, sizeof(pass), RPP_ECHO_OFF) == NULL) {
@@ -140,82 +140,119 @@ void verifyEncodedArgon(char* encoded)
     }
     int rc = argon2i_verify(encoded, pass, strlen(pass));
     if (ARGON2_OK != rc) {
-        printf("ENCODED DOESN't MATCH SUPPLIED\n");
-        return;
-    } else {
-        printf("Match!");
+        // fprintf(stderr, "ENCODED DOESN't MATCH SUPPLIED: %s\n", argon2_error_message(rc));
+        return -1;
     }
+    printf("Match!");
+    return rc;
+}
+
+int loadStore(uTable* ut, const char* filepath)
+{
+    FILE* f = fopen(filepath, "r");
+    if (!f) {
+        fprintf(stderr, "loadStore: %s not accessed\n", filepath);
+        return -1;
+    }
+    uint8_t nasalt[4] = "N/A";
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    char delim[3] = "->";
+    while ((read = getline(&line, &len, f)) != -1) {
+        char* user;
+        char* rawhash;
+        user = strtok(line, delim);
+        rawhash = strtok(NULL, delim);
+        rawhash[strlen(rawhash) - 1] = '\0';
+        insertUser(ut, user, nasalt, rawhash);
+    }
+    fclose(f);
+    dumpTable(ut);
+    return 1;
 }
 
 int main(int argc, char* argv[])
 {
-    // if (argc != 2) {
-    //     printf("usage: %s new\n", argv[0]);
-    //     return 0;
-    // }
-    // uTable* ut = createTable();
-    // char inp;
-    // char user[16];
-    // char pw[32];
-    // printf("Creating new store...\n");
-    // printf("Password Manager 0.0.1\n\n");
-    // printf("  1. Enter new user\n");
-    // printf("  2. Login\n");
-    // printf("  3. Dump table\n");
-    // while (scanf("%c", &inp) == 1) {
-    //     if (inp == 'q') break;
-    //     switch(inp) {
-    //         case '1':
-    //             printf("Enter username: ");
-    //             scanf("%s", user);
-    //             fflush(stdin);
-    //             readpassphrase("Enter password: ", pw, 32, RPP_ECHO_OFF);
-    //             // fflush(stdin);
-    //             uint8_t salt[SALTLEN];
-    //             uGenSalt(salt, SALTLEN);
-    //             uint8_t hash[HASHLEN];
-    //             hashArgon(pw, hash, salt);
-    //             insertUser(ut, user, salt, hash);
-    //             printf("  1. Enter new user\n");
-    //             printf("  2. Login\n");
-    //             printf("  3. Dump table\n");
-    //             break;
-    //         case '2':
-    //             printf("Enter username: ");
-    //             scanf("%s", user);
-    //             User* u = getUser(ut, user);
-    //             char* verify = verifyArgon(u->hash, u->salt);
-    //             if (memcmp(u->hash, verify, HASHLEN) == 0) {
-    //                 printf("success\nwelcome, %s\n\n", u->username);
-    //             }
-    //             free(verify);
-    //             printf("  1. Enter new user\n");
-    //             printf("  2. Login\n");
-    //             printf("  3. Dump table\n");
-    //             break;
-    //         case '3':
-    //             dumpTable(ut);
-    //             printf("  1. Enter new user\n");
-    //             printf("  2. Login\n");
-    //             printf("  3. Dump table\n");
-    //             break;
-    //     }
-    // }
+    if (argc != 2) {
+        printf("usage: %s new\n", argv[0]);
+        return 0;
+    }
+    uTable* ut = createTable();
+    int ret = loadStore(ut, "store.txt");
+    FILE* f = fopen("store.txt", "a");
+    char inp;
+    char user[16];
+    char pw[32];
+    printf("Creating new store...\n");
+    printf("Password Manager 0.0.1\n\n");
+    printf("  1  Enter new user\n");
+    printf("  2  Login\n");
+    printf("  3  Dump table\n");
+    printf("  q  Quit\npwm>> enter choice: ");
+    while (scanf("%c", &inp) == 1) {
+        if (inp == 'q') break;
+        switch(inp) {
+            case '1':
+                printf("\npwm>> enter username: ");
+                scanf("%s", user);
+                fflush(stdin);
+                readpassphrase("\npwm>> enter password: ", pw, 32, RPP_ECHO_OFF);
+                // fflush(stdin);
+                uint8_t salt[SALTLEN];
+                uGenSalt(salt, SALTLEN);
+                // uint8_t hash[HASHLEN];
+                char encoded[ENCODEDLEN];
+                encodedHashArgon(pw, encoded, salt);
+                insertUser(ut, user, salt, encoded);
+                fprintf(f, "%s->%s\n", user, encoded);
+                printf("  1  Enter new user\n");
+                printf("  2  Login\n");
+                printf("  3  Dump table\n");
+                printf("  q  Quit\npwm>> enter choice: ");
+                break;
+            case '2':
+                printf("\npwm>> enter username: ");
+                scanf("%s", user);
+                User* u = getUser(ut, user);
+                int verify = verifyEncodedArgon(u->hash);
+                if (ARGON2_OK == verify) {
+                    printf("\nsuccess: %s logged in\n", user);
+                } else {
+                    printf("\nIncorrect password\n");
+                }
+                printf("  1  Enter new user\n");
+                printf("  2  Login\n");
+                printf("  3  Dump table\n");
+                printf("  q  Quit\npwm>> enter choice: ");
+                break;
+            case '3':
+                dumpTable(ut);
+                printf("  1  Enter new user\n");
+                printf("  2  Login\n");
+                printf("  3  Dump table\n");
+                printf("  q  Quit\npwm>> enter choice: ");
+                break;
+        }
+    }
 
     // char* user = "crab67";
-    uTable* ut = createTable();
-    char* pw = "bbvheysPFqnuAg1$abcd";
-    uint8_t salt[SALTLEN];
-    int gensalt = uGenSalt(salt, SALTLEN);
-    if (gensalt != 1) {
-        fprintf(stderr, "gensalt");
-        destroyTable(ut);
-        exit(EXIT_FAILURE);
-    }
-    char encoded[ENCODEDLEN];
-    encodedHashArgon(pw, encoded, salt);
-    printf("%s\n", encoded);
-    verifyEncodedArgon(encoded);
+    // uTable* ut = createTable();
+    // char* user = "crab67";
+    // char* pw = "bbvheysPFqnuAg1$abcd";
+    // uint8_t salt[SALTLEN];
+    // int gensalt = uGenSalt(salt, SALTLEN);
+    // if (gensalt != 1) {
+    //     fprintf(stderr, "gensalt");
+    //     destroyTable(ut);
+    //     exit(EXIT_FAILURE);
+    // }
+    // char encoded[ENCODEDLEN];
+    // encodedHashArgon(pw, encoded, salt);
+    // printf("%s\n", encoded);
+    // insertUser(ut, user, salt, encoded);
+    // User* u = getUser(ut, user);
+    // verifyEncodedArgon(u->hash);
     // uint8_t hash[HASHLEN];
     // hashArgon(pw, hash, salt);
     // insertUser(ut, user, salt, hash);
@@ -225,5 +262,6 @@ int main(int argc, char* argv[])
     //     printf("Match!\nHash1: %s\nHash2: %s\n", hash, verify);
     // }
     // free(verify);
+    fclose(f);
     destroyTable(ut);
 }

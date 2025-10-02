@@ -47,7 +47,7 @@ uTable* createTable(void)
     return ut;
 }
 
-User* createUser(char* username, uint8_t* salt, uint8_t* hash)
+User* createUser(char* username, uint8_t* salt, char* hash)
 {
     User* u = malloc(sizeof(User));
     if (u == NULL) {
@@ -56,13 +56,13 @@ User* createUser(char* username, uint8_t* salt, uint8_t* hash)
     }
     u->username = strdup(username);
     u->salt = malloc(sizeof(uint8_t) * SALTLEN);
-    u->hash = malloc(sizeof(uint8_t) * HASHLEN);
+    u->hash = malloc(sizeof(char) * ENCODEDLEN);
     memcpy(u->salt, salt, SALTLEN);
-    memcpy(u->hash, hash, HASHLEN);
+    memcpy(u->hash, hash, ENCODEDLEN);
     return u;
 }
 
-void insertUser(uTable* ut, char* username, uint8_t* salt, uint8_t* hash)
+void insertUser(uTable* ut, char* username, uint8_t* salt, char* hash)
 {
     User* new = createUser(username, salt, hash);
     int index = storageGetHash(new->username, ut->capacity, 0);

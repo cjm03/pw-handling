@@ -11,8 +11,8 @@ void hashArgon(char* password, uint8_t* hashbuf, uint8_t* salt);
 
 void encodedHashArgon(char* password, char* encoded, uint8_t* salt);
 
-void verifyEncodedArgon(char* encoded);
-
 char* verifyArgon(uint8_t* password, uint8_t* salt);
+
+int verifyEncodedArgon(char* encoded);
 
 #endif // MANAGER_H

@@ -19,7 +19,7 @@
 typedef struct User {
     char* username;
     uint8_t* salt;
-    uint8_t* hash;
+    char* hash;
 } User;
 
 /*
@@ -38,8 +38,8 @@ int storageHash(const char* s, const int a, const int m);
 int storageGetHash(const char* s, const int users, const int attempt);
 
 uTable* createTable(void);
-User* createUser(char* username, uint8_t* salt, uint8_t* hash);
-void insertUser(uTable* ut, char* username, uint8_t* salt, uint8_t* hash);
+User* createUser(char* username, uint8_t* salt, char* hash);
+void insertUser(uTable* ut, char* username, uint8_t* salt, char* hash);
 
 User* getUser(uTable* ut, const char* username);
 void dumpTable(uTable* ut);

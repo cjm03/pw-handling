@@ -2,3 +2,5 @@ libargon2/
 manager
 test
 .clangd
+store.txt
+*.txt
