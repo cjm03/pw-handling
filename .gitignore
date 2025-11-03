@@ -4,3 +4,4 @@ test
 .clangd
 store.txt
 *.txt
+generator/pwgen
