@@ -4,22 +4,10 @@
 #include <stdint.h>
 #include "storage.h"
 
-int uGenSalt(uint8_t* buffer, int bytes);
+int loadStore(CardDeck* cd, const char* filepath);
 
-char* genSalt(int bytes);
+void storeNewUser(CardDeck* cd, const char* filename, char* username, char* password);
 
-void hashArgon(char* password, uint8_t* hashbuf, uint8_t* salt);
-
-void encodedHashArgon(char* password, char* encoded, uint8_t* salt);
-
-char* verifyArgon(uint8_t* password, uint8_t* salt);
-
-int verifyEncodedArgon(char* encoded);
-
-int loadStore(uTable* ut, const char* filepath);
-
-void storeNewUser(uTable* ut, const char* filename, char* username, char* password);
-
-int loginAsUser(uTable* ut, char* username, char* password);
+int loginAsUser(CardDeck* cd, char* username, char* password);
 
 #endif // MANAGER_H

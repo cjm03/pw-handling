@@ -1,7 +1,7 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
-#include <stdlib.h>
+#include <stdint.h>
 
 #define MAXUSERS 128
 #define HT_PRIME1 151
@@ -11,28 +11,31 @@
 #define ENCODEDLEN 108
 
 /* 
- * a single User
- * @param username: a char pointer storing username
- * @param salt: a uint8_t pointer storing the salt
- * @param hash: a uint8_t pointer storing the hash
+ * a single Card storing a login
+ * @param service_nickname: char pointer storing service shortname
+ * @param username: a char pointer storing service website
+ * @param salt: a char pointer storing the username
+ * @param hash: a char pointer storing the password
 */
-typedef struct User {
+typedef struct UserCard {
+    char* service_nickname;
+    char* service_website;
     char* username;
-    uint8_t* salt;
-    char* hash;
-} User;
+    char* password;
+    // TODO: char* note;
+} UserCard;
 
 /*
- * a table of Users
- * @param capacity: maximum amount of Users
- * @param count: amount of Users currently populated
- * @param users: an array of User pointers
+ * a table of Cards containing all the User's logins
+ * @param capacity: maximum amount of Cards
+ * @param count: amount of Cards currently in use
+ * @param users: an array of Card pointers
 */
-typedef struct uTable {
-    size_t capacity;
-    size_t count;
-    User** users;
-} uTable;
+typedef struct CardDeck {
+    int capacity;
+    int count;
+    UserCard** cards;
+} CardDeck;
 
 /*
  * calculate the hash
@@ -54,7 +57,7 @@ int storageGetHash(const char* s, const int users, const int attempt);
  * create the table storing users
  * generates MAXUSERS Users
 */
-uTable* createTable(void);
+CardDeck* createCardDeck(void);
 
 /*
  * create a User
@@ -62,7 +65,7 @@ uTable* createTable(void);
  * @param salt: salt used for hashing (optional)
  * @param hash: storage for the hashed password
 */
-User* createUser(char* username, uint8_t* salt, char* hash);
+UserCard* createUserCard(char* nickname, char* website, char* username, char* password);
 
 /*
  * create and insert a user into a table
@@ -71,25 +74,25 @@ User* createUser(char* username, uint8_t* salt, char* hash);
  * @param salt: salt used for hashing (optional)
  * @param hash: the hashed password value
 */
-void insertUser(uTable* ut, char* username, uint8_t* salt, char* hash);
+void insertUserCard(CardDeck* cd, char* nickname, char* website, char* username, char* password);
 
 /*
  * iterate through a table to find a user via username
  * @param ut: the table to look through
  * @param username: the username to be searched for
 */
-User* getUser(uTable* ut, const char* username);
+UserCard* getUser(CardDeck* cd, const char* username);
 
 /*
  * output the contents of a user table
  * @param ut: the table to be printed
 */
-void dumpTable(uTable* ut);
+void dumpTable(CardDeck* cd);
 
 // recursively free the users, then free the table
-void destroyTable(uTable* ut);
+void destroyTable(CardDeck* cd);
 
 // free a user
-void destroyUser(User* u);
+void destroyUserCard(UserCard* uc);
 
 #endif // STORAGE_H

@@ -5,3 +5,4 @@ test
 store.txt
 *.txt
 generator/pwgen
+generator/test

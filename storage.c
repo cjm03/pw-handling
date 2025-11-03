@@ -3,7 +3,7 @@
  *  
  *      Hash Table for user info
 ------------------------------------*/
-
+#define _DEFAULT_SOURCE
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,103 +29,103 @@ int storageGetHash(const char* s, const int users, const int attempt)
     return (hasha + (attempt * (hashb + 1))) % users;
 }
 
-uTable* createTable(void)
+CardDeck* createCardDeck(void)
 {
-    uTable* ut = malloc(sizeof(uTable));
-    if (ut == NULL) {
-        fprintf(stderr, "malloc ut failed\n");
+    CardDeck* cd = malloc(sizeof(CardDeck));
+    if (cd == NULL) {
+        fprintf(stderr, "malloc cd failed\n");
         return NULL;
     }
-    ut->capacity = MAXUSERS;
-    ut->count = 0;
-    ut->users = calloc(ut->capacity, sizeof(User*));
-    if (ut->users == NULL) {
-        fprintf(stderr, "calloc ut->users failed\n");
-        free(ut);
+    cd->capacity = MAXUSERS;
+    cd->count = 0;
+    cd->cards = calloc(cd->capacity, sizeof(UserCard*));
+    if (cd->cards == NULL) {
+        fprintf(stderr, "calloc cd->users failed\n");
+        free(cd);
         return NULL;
     }
-    return ut;
+    return cd;
 }
 
-User* createUser(char* username, uint8_t* salt, char* hash)
+UserCard* createUserCard(char* nickname, char* website, char* username, char* password)
 {
-    User* u = malloc(sizeof(User));
-    if (u == NULL) {
+    UserCard* uc = malloc(sizeof(UserCard));
+    if (uc == NULL) {
         fprintf(stderr, "malloc u failed\n");
         return NULL;
     }
-    u->username = strdup(username);
-    u->salt = malloc(sizeof(uint8_t) * SALTLEN);
-    u->hash = malloc(sizeof(char) * ENCODEDLEN);
-    memcpy(u->salt, salt, SALTLEN);
-    memcpy(u->hash, hash, ENCODEDLEN);
-    return u;
+    uc->service_nickname = strdup(nickname);
+    uc->service_website = strdup(website);
+    uc->username = strdup(username);
+    uc->password = strdup(password);
+    return uc;
 }
 
-void insertUser(uTable* ut, char* username, uint8_t* salt, char* hash)
+void insertUserCard(CardDeck* cd, char* nickname, char* website, char* username, char* password)
 {
-    User* new = createUser(username, salt, hash);
-    int index = storageGetHash(new->username, ut->capacity, 0);
-    User* cur = ut->users[index];
+    UserCard* new = createUserCard(nickname, website, username, password);
+    int index = storageGetHash(new->username, cd->capacity, 0);
+    UserCard* cur = cd->cards[index];
     int i = 1;
     while (cur != NULL) {
         if (strcmp(cur->username, username) == 0) {
-            destroyUser(cur);
-            ut->users[index] = new;
+            destroyUserCard(cur);
+            cd->cards[index] = new;
             return;
         }
-        index = storageGetHash(new->username, ut->capacity, i);
-        cur = ut->users[index];
+        index = storageGetHash(new->username, cd->capacity, i);
+        cur = cd->cards[index];
         i++;
     }
-    ut->users[index] = new;
-    ut->count++;
+    cd->cards[index] = new;
+    cd->count++;
 }
 
-User* getUser(uTable* ut, const char* username)
+UserCard* getUser(CardDeck* cd, const char* username)
 {
-    int index = storageGetHash(username, ut->capacity, 0);
-    User* cur = ut->users[index];
+    int index = storageGetHash(username, cd->capacity, 0);
+    UserCard* cur = cd->cards[index];
     int i = 1;
     while (cur != NULL) {
         if (strcmp(cur->username, username) == 0) {
             return cur;
         }
-        index = storageGetHash(username, ut->capacity, i);
-        cur = ut->users[index];
+        index = storageGetHash(username, cd->capacity, i);
+        cur = cd->cards[index];
         i++;
     }
     return NULL;
 }
 
-void dumpTable(uTable* ut)
+void dumpTable(CardDeck* cd)
 {
-    for (int i = 0; i < ut->capacity; ++i) {
-        User* cur = ut->users[i];
+    for (int i = 0; i < cd->capacity; ++i) {
+        UserCard* cur = cd->cards[i];
         if (cur != NULL) {
-            printf("[%s]:%s -> %s\n", cur->username, cur->salt, cur->hash);
+            printf("%s (%s): %s -> %s\n", cur->service_nickname, cur->service_website, cur->username, cur->password);
         }
     }
 }
 
-void destroyTable(uTable* ut)
+void destroyTable(CardDeck* cd)
 {
-    for (size_t i = 0; i < ut->capacity; ++i) {
-        User* cur = ut->users[i];
+    for (int i = 0; i < cd->capacity; ++i) {
+        UserCard* cur = cd->cards[i];
         if (cur != NULL) {
-            destroyUser(ut->users[i]);
+            destroyUserCard(cd->cards[i]);
         }
     }
-    free(ut->users);
-    free(ut);
+    free(cd->cards);
+    free(cd);
 }
 
-void destroyUser(User* u)
+void destroyUserCard(UserCard* uc)
 {
-    free(u->username);
-    free(u->salt);
-    free(u->hash);
-    free(u);
+    free(uc->service_nickname);
+    free(uc->service_website);
+    free(uc->username);
+    free(uc->password);
+    free(uc);
 }
 
 
