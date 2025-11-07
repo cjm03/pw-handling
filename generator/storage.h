@@ -13,6 +13,7 @@ typedef struct UserCard {
 typedef struct CardDeck {
     int capacity;
     int count;
+    int locked;
     UserCard** cards;
 } CardDeck;
 
@@ -28,8 +29,16 @@ void freeCardDeck(CardDeck* cd);
 
 void dumpCardDeck(CardDeck* cd);
 
+void dumpDeckInfo(CardDeck* cd);
+
+int saveDeckToFile(CardDeck* cd, char* filename);
+
+int readDeckFromFile(CardDeck* cd, char* filename);
+
 UserCard* findPassWithNickname(CardDeck* cd, char* nickname);
 
 void lockCardDeck(CardDeck* cd, char* key);
+
+void unlockCardDeck(CardDeck* cd, char* key);
 
 #endif // STORAGE_H

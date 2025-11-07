@@ -23,9 +23,8 @@ int main(void)
 {
     srand(time(NULL));
     CardDeck* cd = createCardDeck();
-    loadTest(cd);
+    // loadTest(cd);
     int choice;
-    int locked = 0;
     char* key = malloc(64 * sizeof(char));
 
     printf("\033[1;32m   _____ _____ _____     _____ _ _ _ \033[0m\n");
@@ -33,6 +32,7 @@ int main(void)
     printf("\033[1;32m  |  |  |   __| | | |___|   __| | | |\033[0m\n");
     printf("\033[1;32m  |_____|_____|_|___|   |__|  |_____|\033[0m\n\n");
 
+    printf("No deck loaded. Initialize the key and begin adding entries or load a deck\n");
     printf("Initialize the master key (48-63 chars): ");
     scanf("%s", key);
 
@@ -44,11 +44,14 @@ int main(void)
         printf("    4. Lock the deck\n");
         printf("    5. Unlock the deck\n");
         printf("    6. Generate and print a new password\n");
-        // TODO: printf("    7. Save the deck to a file\n");
-        printf("    7. Quit\n\n");
+        printf("    7. Save the deck to a file\n");
+        printf("    8. Load a deck from a file\n");
+        printf("    9. Print general info about the deck\n");
+        printf("    0. Quit\n\n");
         printf("> ");
         scanf("%d", &choice);
 
+// Add a New Entry
 /* 1 */ if (choice == 1) {
             char* n = malloc(16 * sizeof(char));    // This all feels highly unoptimized
             char* w = malloc(32 * sizeof(char));
@@ -81,6 +84,8 @@ int main(void)
                 free(u);
                 free(p);
             }
+
+// Find a Specific Entry
 /* 2 */ } else if (choice == 2) {
 
             char* n = malloc(16 * sizeof(char));
@@ -95,13 +100,15 @@ int main(void)
             }
             free(n);
 
+// Dump Table Entries
 /* 3 */ } else if (choice == 3) {
 
             dumpCardDeck(cd);
 
+// Lock Deck
 /* 4 */ } else if (choice == 4) {
 
-            if (locked == 1) {
+            if (cd->locked == 1) {
                 printf("Shit already locked...?\n");
             } else {
                 char* attempt = malloc(64 * sizeof(char));
@@ -111,30 +118,32 @@ int main(void)
                     lockCardDeck(cd, attempt);
                     printf("Deck locked\n");
                     free(attempt);
-                    locked = 1;
                 } else {
                     free(attempt);
                     printf("WRONG!!!\n");
                 }
             }
+
+// Unlock Deck
 /* 5 */ } else if (choice == 5) {
 
-            if (locked == 0) {
+            if (cd->locked == 0) {
                 printf("Shit aint even locked...?\n");
             } else {
                 char* attempt = malloc(64 * sizeof(char));
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
-                    lockCardDeck(cd, attempt);
+                    unlockCardDeck(cd, attempt);
                     printf("Deck unlocked\n");
                     free(attempt);
-                    locked = 0;
                 } else {
                     free(attempt);
                     printf("WRONG!!!\n");
                 }
             }
+
+// Output Generated Password
 /* 6 */ } else if (choice == 6) {
 
             int desiredLength = 16;
@@ -160,7 +169,45 @@ int main(void)
             }
             free(pwd);
 
+// Save Deck To File
 /* 7 */ } else if (choice == 7) {
+
+            char* filename = malloc(32 * sizeof(char));
+            printf("Enter name of file to save to: ");
+            scanf("%s", filename);
+            int ret = saveDeckToFile(cd, filename);
+            if (ret != 0) {
+                fprintf(stderr, "error saving to file");
+                free(filename);
+                break;
+            }
+            free(filename);
+
+// Load Deck From File
+/* 8 */ } else if (choice == 8) {
+            
+            char* filename = malloc(32 * sizeof(char));
+            printf("Enter name of file to read from: ");
+            scanf("%s", filename);
+            int ret = readDeckFromFile(cd, filename);
+            if (ret == -1) {
+                fprintf(stderr, "error reading from file");
+                free(filename);
+                break;
+            }
+            free(filename);
+            if (cd->locked == 1) {
+                printf("WARNING: THIS DECK IS CURRENTLY LOCKED & ENCRYPTED\n");
+            } else {
+                printf("Loaded unlocked deck successfully!\n");
+            }
+
+        } else if (choice == 9) {
+
+            dumpDeckInfo(cd);
+
+// QUIT
+/* 0 */ } else if (choice == 0) {
 
             printf("BYE!\n");
             break;
