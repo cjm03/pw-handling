@@ -28,10 +28,9 @@
  *      9. Print general info about the current deck
  *          - Prints current count, max capacity, locked state, and all the service nicknames.
  *      0. Quit
- * Locking verifies that the Deck isn't already locked, and requires the user to enter the master key before XORing each character 
- * of each password with the corresponding character of the master key.
- * This is not future proof, and 100% relies on each Card having a password that is shorter than the length of the master key. Unlocking operates in
- * the exact same way.
+ * Locking verifies that the Deck isn't already locked, and requires the user to enter the master key. Each card's password element is then encrypted
+ * using AES with the master key.
+ * Unlocking operates in the exact same way. The program does not remember your master key, so don't lose it!
 */
 
 int main(void)
@@ -51,7 +50,6 @@ int main(void)
     scanf("%s", key);
 
     while (1) {
-        // printf("\n--- PWM ---\n");
         printf("\nOptions:\n");
         printf("    1. Add new entry\n");
         printf("    2. Find a password\n");
@@ -66,9 +64,9 @@ int main(void)
         printf("> ");
         scanf("%d", &choice);
 
-////////////////////
-// 1: Add a New Entry
-////////////////////
+    ////////////////////
+    // 1: Add a New Entry
+    ////////////////////
         if (choice == 1) {
 
             UserCard* card = createEmptyUserCard();
@@ -88,11 +86,22 @@ int main(void)
                 scanf("%d", &len);
                 printf("Simple (1) or Dashed (2)?: ");
                 scanf("%d", &type);
-                if (type == 1) card->password = genSimplePassword(len);
-                else card->password = genDashedPassword(len);
-                insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
-                       card->service_nickname, card->service_website, card->username, card->password);
+                if (type == 1) {
+                    char* pwd = genSimplePassword(len);
+                    insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
+                    printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                           card->service_nickname, card->service_website, card->username, pwd);
+                    free(pwd);
+                } else {
+                    char* pwd = genDashedPassword(len);
+                    insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
+                    printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                           card->service_nickname, card->service_website, card->username, pwd);
+                    free(pwd);
+                }
+                // insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
+                // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                //        card->service_nickname, card->service_website, card->username, pwd);
             } else {
                 printf("Enter password: ");
                 scanf(" %s", card->password);
@@ -102,9 +111,9 @@ int main(void)
             }
             freeUserCard(card);
 
-////////////////////
-// 2: Find a Specific Entry
-////////////////////
+    ////////////////////
+    // 2: Find an Entry
+    ////////////////////
         } else if (choice == 2) {
 
             char* n = malloc(16 * sizeof(char));                                // ALLOC: n
@@ -119,16 +128,16 @@ int main(void)
             }
             free(n);                                                            // FREE: n
 
-////////////////////
-// 3: Dump Table Entries
-////////////////////
+    ////////////////////
+    // 3: Dump Table Entries
+    ////////////////////
         } else if (choice == 3) {
 
             dumpCardDeck(cd);
 
-////////////////////
-// 4: Lock Deck
-////////////////////
+    ////////////////////
+    // 4: Lock Deck
+    ////////////////////
         } else if (choice == 4) {
 
             if (cd->locked == 1) {
@@ -138,7 +147,8 @@ int main(void)
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
-                    lockCardDeck(cd, attempt);
+                    AESLockDeck(cd, attempt);
+                    // lockCardDeck(cd, attempt);
                     printf("Deck locked\n");
                 } else {
                     printf("WRONG!!!\n");
@@ -146,9 +156,9 @@ int main(void)
                 free(attempt);                                      // FREE: attempt
             }
 
-////////////////////
-// 5: Unlock Deck
-////////////////////
+    ////////////////////
+    // 5: Unlock Deck
+    ////////////////////
         } else if (choice == 5) {
 
             if (cd->locked == 0) {
@@ -158,7 +168,8 @@ int main(void)
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
-                    unlockCardDeck(cd, attempt);
+                    AESUnlockDeck(cd, attempt);
+                    // unlockCardDeck(cd, attempt);
                     printf("Deck unlocked\n");
                 } else {
                     printf("ERROR: master key incorrect\n");
@@ -166,9 +177,9 @@ int main(void)
                 free(attempt);                                      // FREE: attempt
             }
 
-////////////////////
-// 6: Output Generated Password
-////////////////////
+    ////////////////////
+    // 6: Generate Password
+    ////////////////////
         } else if (choice == 6) {
 
             int desiredLength = 16;
@@ -179,11 +190,7 @@ int main(void)
             printf("Enter 1 for simple or 2 for dashed: ");
             scanf("%d", &desiredType);
             if (desiredLength <= 0 || desiredLength >= 64) desiredLength = 16;
-            if (desiredType == 1) {
-                printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-                pwd = genSimplePassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            } else if (desiredType == 2) {
+            if (desiredType == 2) {
                 printf("\033[1;32m\nGenerating DASHED %d-character password...\n\033[0m", desiredLength);
                 pwd = genDashedPassword(desiredLength);
                 printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
@@ -194,9 +201,9 @@ int main(void)
             }
             free(pwd);                                                      // FREE: pwd
 
-////////////////////
-// 7: Save Deck To File
-////////////////////
+    ////////////////////
+    // 7: Save Deck
+    ////////////////////
         } else if (choice == 7) {
 
             char* filename = malloc(32 * sizeof(char));         // ALLOC: filename
@@ -210,9 +217,9 @@ int main(void)
             }
             free(filename);                                     // FREE: filename
 
-////////////////////
-// 8: Load Deck From File
-////////////////////
+    ////////////////////
+    // 8: Load Deck
+    ////////////////////
         } else if (choice == 8) {
             
             char* filename = malloc(32 * sizeof(char));         // ALLOC: filename
@@ -236,9 +243,9 @@ int main(void)
 
             dumpDeckInfo(cd);
 
-////////////////////
-// 0: QUIT
-////////////////////
+    ////////////////////
+    // 0: QUIT
+    ////////////////////
         } else if (choice == 0) {
 
             printf("BYE!\n");

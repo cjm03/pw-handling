@@ -41,8 +41,8 @@ int readDeckFromFile(CardDeck* cd, char* filename);
 
 UserCard* findPassWithNickname(CardDeck* cd, char* nickname);
 
-void lockCardDeck(CardDeck* cd, char* key);
+void AESLockDeck(CardDeck* cd, char* key);
 
-void unlockCardDeck(CardDeck* cd, char* key);
+void AESUnlockDeck(CardDeck* cd, char* key);
 
 #endif // STORAGE_H

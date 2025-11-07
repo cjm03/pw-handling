@@ -37,25 +37,26 @@ char* genSimplePassword(int len)
     for (int i = 0; i < len; i++) {
         pwd[i] = genCharacter();
     }
+    pwd[len] = '\0';
     return pwd;
 }
 
 char* genDashedPassword(int len)
 {
-    int cut = len - (len % 6);
-    int dashes = (cut / 6) - 1;
-    char* pwd = malloc((cut + dashes) * sizeof(char) + 1);
+    int cut = len - ((len - 6) % 7);
+    char* pwd = malloc(cut * sizeof(char) + 1);
     if (!pwd) {
         fprintf(stderr, "error: could not allocate for simple pwd\n");
         exit(EXIT_FAILURE);
     }
-    for (int i = 0; i < cut + dashes; i++) {
+    for (int i = 0; i < cut; i++) {
         if ((i + 1) % 7 == 0) {
             pwd[i] = '-';
         } else {
             pwd[i] = genCharacterForDashed();
         }
     }
+    pwd[cut] = '\0';
     return pwd;
 }
 
@@ -90,13 +91,3 @@ int sha256(char* pwd)
     printf("\n");
     return 0;
 }
-// {
-//     unsigned char* hash = malloc(SHA256_DIGEST_LENGTH * sizeof(unsigned char));
-//
-//     SHA256_CTX sha256;
-//     SHA256_Init(&sha256);
-//     SHA256_Update(&sha256, pwd, strlen(pwd));
-//     SHA256_Final(hash, &sha256);
-//
-//     return hash;
-// }

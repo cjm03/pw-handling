@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include "central.h"
+#include "../external/aes.h"
 
 
 UserCard* createEmptyUserCard(void)
@@ -29,10 +30,10 @@ UserCard* createUserCard(char* nickname, char* website, char* username, char* pa
         fprintf(stderr, "malloc: error allocating memory for UserCard struct uc\n");
         return NULL;
     }
-    uc->service_nickname = strdup(nickname);
-    uc->service_website = strdup(website);
-    uc->username = strdup(username);
-    uc->password = strdup(password);
+    uc->service_nickname = portableStrndup(nickname, strlen(nickname));
+    uc->service_website = portableStrndup(website, strlen(website));
+    uc->username = portableStrndup(username, strlen(username));
+    uc->password = portableStrndup(password, strlen(password));
     return uc;
 }
 
@@ -93,7 +94,6 @@ void dumpCardDeck(CardDeck* cd)
     for (int i = 0; i < cd->count; i++) {
         UserCard* cur = cd->cards[i];
         printf("%s:\n  website: (%s)\n  username: %s\n  password: %s\n", cur->service_nickname, cur->service_website, cur->username, cur->password);
-        // printf("%s (%s): %s -> %s\n", cur->service_nickname, cur->service_website, cur->username, cur->password);
     }
 }
 
@@ -227,6 +227,7 @@ int readDeckFromFile(CardDeck* cd, char* filename)
         while (i < filesize && isspace((unsigned char)buffer[i])) i++;
         if (i < filesize && buffer[i] == ',') i++;
         insertUserCard(cd, fields[0], fields[1], fields[2], fields[3]);
+        for (int k = 0; k < 4; k++) free(fields[k]);
     }
 
     free(buffer);
@@ -245,34 +246,28 @@ UserCard* findPassWithNickname(CardDeck* cd, char* nickname)
     return NULL;
 }
 
-void lockCardDeck(CardDeck* cd, char* key)
+void AESLockDeck(CardDeck* cd, char* key)
 {
+    uint8_t nkey[strlen(key)];
+    StrToHex(key, nkey, strlen(key));
+    struct AES_ctx ctx;
+    AES_init_ctx(&ctx, nkey);
     for (int i = 0; i < cd->count; i++) {
         UserCard* cur = cd->cards[i];
-        int len = strlen(cur->password);
-        for (int j = 0; j < len; j++) {
-            cur->password[j] = cur->password[j] ^ key[j];
-        }
+        AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
     }
     cd->locked = 1;
 }
 
-void unlockCardDeck(CardDeck* cd, char* key)
+void AESUnlockDeck(CardDeck* cd, char* key)
 {
+    uint8_t nkey[strlen(key)];
+    StrToHex(key, nkey, strlen(key));
+    struct AES_ctx ctx;
+    AES_init_ctx(&ctx, nkey);
     for (int i = 0; i < cd->count; i++) {
         UserCard* cur = cd->cards[i];
-        int len = strlen(cur->password);
-        for (int j = 0; j < len; j++) {
-            cur->password[j] = cur->password[j] ^ key[j];
-        }
+        AES_ECB_decrypt(&ctx, (unsigned char*)cur->password);
     }
     cd->locked = 0;
 }
-
-// int linecount = getLinesInFile(filename);
-// if (linecount == -1) {
-//     return -1;
-// } else if (linecount == 0) {
-//     fprintf(stderr, "error: %s is empty\n", filename);
-//     return 0;
-// }

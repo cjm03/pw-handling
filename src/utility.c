@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,4 +63,11 @@ char* trimDeckFile(char* buffer, int len)
         end--;
     }
     return portableStrndup(buffer + start, end - start);
+}
+
+void StrToHex(char* in, uint8_t* out, size_t length)
+{
+    for (size_t i = 0; i < length; ++i) {
+        out[i] = (uint8_t)in[i];
+    }
 }

@@ -22,7 +22,7 @@ int main(void)
 {
     srand(time(NULL));
     CardDeck* cd = createCardDeck();
-    // loadTest(cd);
+    loadTest(cd);
     int choice;
     char* key = malloc(64 * sizeof(char));
 
@@ -52,7 +52,7 @@ int main(void)
 
 // Add a New Entry
 /* 1 */ if (choice == 1) {
-            UserCard* card = createEmptyUserCard();
+            UserCard* card = createEmptyUserCard();                             // ALLOC: card
             int gen = 0;
             printf("Nickname: ");
             scanf("%s", card->service_nickname);
@@ -71,15 +71,21 @@ int main(void)
                 scanf("%d", &type);
                 if (type == 1) card->password = genSimplePassword(len);
                 else card->password = genDashedPassword(len);
-                insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", card->service_nickname, card->service_website, card->username, card->password);
+                insertUserCard(cd, card->service_nickname, card->service_website, 
+                               card->username, card->password);
+                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", 
+                       card->service_nickname, card->service_website, 
+                       card->username, card->password);
             } else {
                 printf("Enter password: ");
                 scanf(" %s", card->password);
-                insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", card->service_nickname, card->service_website, card->username, card->password);
+                insertUserCard(cd, card->service_nickname, card->service_website, 
+                               card->username, card->password);
+                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", 
+                       card->service_nickname, card->service_website, 
+                       card->username, card->password);
             }
-            freeUserCard(card);
+            freeUserCard(card);                                                 // FREE: card
 
 // Find a Specific Entry
 /* 2 */ } else if (choice == 2) {
