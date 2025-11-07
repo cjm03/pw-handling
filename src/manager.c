@@ -89,13 +89,14 @@ int main(void)
                 if (type == 1) {
                     char* pwd = genSimplePassword(len);
                     insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
-                    printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                    // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                    printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                            card->service_nickname, card->service_website, card->username, pwd);
                     free(pwd);
                 } else {
                     char* pwd = genDashedPassword(len);
                     insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
-                    printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                    printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                            card->service_nickname, card->service_website, card->username, pwd);
                     free(pwd);
                 }
@@ -106,7 +107,8 @@ int main(void)
                 printf("Enter password: ");
                 scanf(" %s", card->password);
                 insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
+                printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                        card->service_nickname, card->service_website, card->username, card->password);
             }
             freeUserCard(card);
@@ -121,8 +123,11 @@ int main(void)
             scanf("%s", n);
             UserCard* uc = findPassWithNickname(cd, n);
             if (uc) {
-                printf("%s:\n  u: %s\n  p: %s\n",
-                       n, uc->username, uc->password);
+                // printf("%s:\n  u: %s\n  p: %s\n",
+                //        n, uc->username, uc->password);
+                printf("\033[1;32m\n%s\n\033[0m", n);
+                printf("    \033[1;35mu: \033[1;91m%s\n\033[0m", uc->username);
+                printf("    \033[1;35mp: \033[1;91m%s\n\033[0m\n", uc->password);
             } else {
                 printf("Could not find an entry for %s\n", n);
             }
