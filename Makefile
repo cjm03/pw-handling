@@ -1,6 +1,6 @@
 # Makefile
 CC=gcc
-CFLAGS=-g -O2 -Wall -pedantic -I/include -lssl -lcrypto -std=c99
+CFLAGS=-g -O2 -Wall -pedantic -I/include -lssl -lcrypto -lm -L./external -l:libcrabc.a -std=c99
 TARGET=pwm
 SRC=src/manager.c src/pwgen.c src/storage.c src/utility.c
 EXTERNAL=external/aes.c
@@ -11,8 +11,9 @@ all: clean build
 pwgen:
 	$(CC) src/cli-gen.c src/pwgen.c $(CFLAGS) -o pwgen
 
+.PHONY: test
 test:
-	$(CC) src/test.c src/pwgen.c src/storage.c src/utility.c $(CFLAGS) -o test
+	$(CC) src/test.c src/pwgen.c src/storage.c src/utility.c external/aes.c $(CFLAGS) -o test
 
 build:
 	@echo "Compiling $(TARGET)..."

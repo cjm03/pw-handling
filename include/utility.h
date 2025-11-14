@@ -11,11 +11,11 @@ int getLinesInFile(char* filename);
 
 char* portableStrndup(char* buffer, int n);
 
-char* trimDeckFile(char* buffer, int len);
+char* trimDeckFile(M_Arena* arena, char* buffer, int len);
 
 void StrToHex(char* in, uint8_t* out, size_t length);
 
-void uAddNewUserEntry(CardDeck* deck, UserCard* card);
+void uAddNewUserEntry(M_Arena* arena, CardDeck* deck, UserCard* card);
 
 void uGeneratePassword(void);
 

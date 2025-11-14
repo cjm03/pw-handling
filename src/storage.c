@@ -5,99 +5,32 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <math.h>
+
 #include "central.h"
 #include "../external/aes.h"
+#include "../external/allhead.h"
 
 
-UserCard* createEmptyUserCard(void)
-{
-    UserCard* uc = malloc(sizeof(UserCard));
-    if (!uc) {
-        fprintf(stderr, "malloc: error allocating memory for UserCard struct uc\n");
-        return NULL;
-    }
-    uc->service_nickname = malloc(16 * sizeof(char));
-    uc->service_website = malloc(32 * sizeof(char));
-    uc->username = malloc(16 * sizeof(char));
-    uc->password = malloc(64 * sizeof(char));
-    return uc;
-}
 
-UserCard* createUserCard(char* nickname, char* website, char* username, char* password)
-{
-    UserCard* uc = malloc(sizeof(UserCard));
-    if (!uc) {
-        fprintf(stderr, "malloc: error allocating memory for UserCard struct uc\n");
-        return NULL;
-    }
-    uc->service_nickname = portableStrndup(nickname, strlen(nickname));
-    uc->service_website = portableStrndup(website, strlen(website));
-    uc->username = portableStrndup(username, strlen(username));
-    uc->password = portableStrndup(password, strlen(password));
-    return uc;
-}
-
-CardDeck* createCardDeck(void)
-{
-    CardDeck* cd = malloc(sizeof(CardDeck));
-    if (cd == NULL) {
-        fprintf(stderr, "malloc: error allocating memory for CardDeck struct cd\n");
-        return NULL;
-    }
-    cd->capacity = MAXCARDS;
-    cd->count = 0;
-    cd->locked = 0;
-    cd->cards = calloc(cd->capacity, sizeof(UserCard*));
-    if (cd->cards == NULL) {
-        fprintf(stderr, "calloc: error allocating %d blocks of UserCard* bytes\n", cd->capacity);
-    }
-    return cd;
-}
-
-void insertUserCard(CardDeck* cd, char* nickname, char* website, char* username, char* password)
-{
-    UserCard* uc = createUserCard(nickname, website, username, password);
-    cd->cards[cd->count] = uc;
-    cd->count++;
-}
-
-void freeUserCard(UserCard* uc)
-{
-    free(uc->service_nickname);
-    free(uc->service_website);
-    free(uc->username);
-    free(uc->password);
-    free(uc);
-}
-
-void freeCardDeck(CardDeck* cd)
+void DumpHashCardDeck(CardDeck* cd)
 {
     for (int i = 0; i < cd->capacity; i++) {
         UserCard* cur = cd->cards[i];
         if (cur != NULL) {
-            freeUserCard(cd->cards[i]);
+            int idx = GetSimpleHash(cur->service_nickname, cd->capacity, 0);
+            printf("[%d] %s:\n  website: (%s)\n  username: %s\n  password: %s\n", idx, cur->service_nickname, cur->service_website, cur->username, cur->password);
+            while (cur->next != NULL) {
+                printf("%s:\n  website: (%s)\n  username: %s\n  password: %s\n", cur->service_nickname, cur->service_website, cur->username, cur->password);
+                cur = cur->next;
+            }
         }
     }
-    free(cd->cards);
-    free(cd);
 }
 
-void dumpCardDeck(CardDeck* cd)
-{
-    for (int i = 0; i < cd->count; i++) {
-        UserCard* cur = cd->cards[i];
-        printf("%s:\n  website: (%s)\n  username: %s\n  password: %s\n", cur->service_nickname, cur->service_website, cur->username, cur->password);
-    }
-}
-
-void dumpDeckInfo(CardDeck* cd)
+void DumpHashCardDeckInfo(CardDeck* cd)
 {
     printf("Locked: %d\nCount: %d\nCapacity: %d\n", cd->locked, cd->count, cd->capacity);
-    printf("Services: \n");
-    for (int i = 0; i < cd->count; i++) {
-        UserCard* cur = cd->cards[i];
-        printf("%s ", cur->service_nickname);
-    }
 }
 
 int saveDeckToFile(CardDeck* cd, char* filename)
@@ -108,16 +41,20 @@ int saveDeckToFile(CardDeck* cd, char* filename)
         return -1;
     }
     fprintf(f, "%d {\n", cd->locked);
-    for (int i = 0; i < cd->count; i++) {
+    int cnt = 0;
+    for (int i = 0; i < cd->capacity; i++) {
         UserCard* cur = cd->cards[i];
-        fprintf(f, "\t%d {\n", i);
-        fprintf(f, "\t\t%s,\n", cur->service_nickname);
-        fprintf(f, "\t\t%s,\n", cur->service_website);
-        fprintf(f, "\t\t%s,\n", cur->username);
-        if (i == cd->count - 1) {
-            fprintf(f, "\t\t%s\n\t}\n", cur->password);
-        } else {
-            fprintf(f, "\t\t%s\n\t},\n", cur->password);
+        if (cur != NULL) {
+            cnt++;
+            fprintf(f, "\t%d {\n", i);
+            fprintf(f, "\t\t%s,\n", cur->service_nickname);
+            fprintf(f, "\t\t%s,\n", cur->service_website);
+            fprintf(f, "\t\t%s,\n", cur->username);
+            if (cnt == cd->count) {
+                fprintf(f, "\t\t%s\n\t}\n", cur->password);
+            } else {
+                fprintf(f, "\t\t%s\n\t},\n", cur->password);
+            }
         }
     }
     fprintf(f, "}\n\n");
@@ -125,7 +62,7 @@ int saveDeckToFile(CardDeck* cd, char* filename)
     return 0;
 }
 
-int readDeckFromFile(CardDeck* cd, char* filename)
+int readDeckFromFile(M_Arena* arena, CardDeck* cd, char* filename)
 {
     int filesize = getSizeOfFile(filename);
     if (filesize == -1) {
@@ -140,7 +77,7 @@ int readDeckFromFile(CardDeck* cd, char* filename)
         fprintf(stderr, "open: error opening %s\n", filename);
         return -1;
     }
-    char* buffer = malloc((filesize * sizeof(char)) + 1);
+    char* buffer = ArenaAlloc(arena, (filesize * sizeof(char)) + 1);
     if (buffer == NULL) {
         fprintf(stderr, "malloc: error allocating %d bytes to read %s\n", filesize, filename);
         close(fd);
@@ -149,7 +86,6 @@ int readDeckFromFile(CardDeck* cd, char* filename)
     ssize_t bRead = read(fd, buffer, filesize);
     if (bRead != filesize) {
         fprintf(stderr, "read: filesize mismatch; expected %d, got %zu\n", filesize, bRead);
-        free(buffer);
         close(fd);
         return -1;
     }
@@ -189,13 +125,12 @@ int readDeckFromFile(CardDeck* cd, char* filename)
             }
             int end = i;
             while (end > start && isspace((unsigned char)buffer[end - 1])) end--;
-            fields[f] = portableStrndup(buffer + start, end - start);
+            fields[f] = MStrndup(arena, buffer + start, end - start);
             if (!fields[f]) ok = 0;
             i++;
         }
         if (!ok) {
             for (int k = 0; k < 4; ++k) {
-                free(fields[k]);
             }
         }
         while (i < filesize && isspace((unsigned char)buffer[i])) i++;
@@ -215,28 +150,33 @@ int readDeckFromFile(CardDeck* cd, char* filename)
                 free(fields[k]);
             }
         }
-        fields[3] = trimDeckFile(buffer + pws, pwe - pws);
+        fields[3] = trimDeckFile(arena, buffer + pws, pwe - pws);
         i++;
         while (i < filesize && isspace((unsigned char)buffer[i])) i++;
         if (i < filesize && buffer[i] == ',') i++;
-        insertUserCard(cd, fields[0], fields[1], fields[2], fields[3]);
-        for (int k = 0; k < 4; k++) free(fields[k]);
+        InsertHashUserCard(arena, cd, fields[0], fields[1], fields[2], fields[3]);
     }
 
-    free(buffer);
     close(fd);
     return 0;
 }
 
-UserCard* findPassWithNickname(CardDeck* cd, char* nickname)
+UserCard* FindHashPassWithNickname(CardDeck* cd, char* nickname)
 {
-    for (int i = 0; i < cd->count; i++) {
-        UserCard* cur = cd->cards[i];
-        if (strcmp(cur->service_nickname, nickname) == 0) {
-            return cur;
+    int index = GetSimpleHash(nickname, cd->capacity, 0);
+    UserCard* cur = cd->cards[index];
+    if (strcmp(cur->service_nickname, nickname) == 0) {
+        return cur;
+    } else {
+        while (cur->next != NULL) {
+            cur = cur->next;
+            if (strcmp(cur->service_nickname, nickname) == 0) {
+                return cur;
+            }
         }
     }
     return NULL;
+
 }
 
 void AESLockDeck(CardDeck* cd, char* key)
@@ -245,9 +185,15 @@ void AESLockDeck(CardDeck* cd, char* key)
     StrToHex(key, nkey, strlen(key));
     struct AES_ctx ctx;
     AES_init_ctx(&ctx, nkey);
-    for (int i = 0; i < cd->count; i++) {
+    for (int i = 0; i < cd->capacity; i++) {
         UserCard* cur = cd->cards[i];
-        AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
+        if (cur != NULL) {
+            AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
+            while (cur->next != NULL) {
+                cur = cur->next;
+                AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
+            }
+        }
     }
     cd->locked = 1;
 }
@@ -258,9 +204,91 @@ void AESUnlockDeck(CardDeck* cd, char* key)
     StrToHex(key, nkey, strlen(key));
     struct AES_ctx ctx;
     AES_init_ctx(&ctx, nkey);
-    for (int i = 0; i < cd->count; i++) {
+    for (int i = 0; i < cd->capacity; i++) {
         UserCard* cur = cd->cards[i];
-        AES_ECB_decrypt(&ctx, (unsigned char*)cur->password);
+        if (cur != NULL) {
+            AES_ECB_decrypt(&ctx, (unsigned char*)cur->password);
+            while (cur->next != NULL) {
+                cur = cur->next;
+                AES_ECB_decrypt(&ctx, (unsigned char*)cur->password);
+            }
+        }
     }
     cd->locked = 0;
+}
+
+char* MStrndup(M_Arena* arena, char* data, size_t n) {
+    char* p = ArenaAlloc(arena, n + 1);
+    memcpy(p, data, n);
+    p[n] = '\0';
+    return p;
+}
+
+// Hashing
+
+int SimpleHash(const char* identifier, const int prime, const int mod)
+{
+    long hash = 0;
+    const int len = strlen(identifier);
+    for (int i = 0; i < len; i++) {
+        hash += (long)pow(prime, len - (i + 1)) * identifier[i];
+        hash = hash % mod;
+    }
+    return (int)hash;
+}
+
+int GetSimpleHash(const char* identifier, const int mod, const int attempt)
+{
+    const int a = SimpleHash(identifier, HASH_PRIME1, mod);
+    const int b = SimpleHash(identifier, HASH_PRIME2, mod);
+    return (a + (attempt * (b + 1))) % mod;
+}
+
+
+CardDeck* CreateHashCardDeck(M_Arena* arena)
+{
+    CardDeck* cd = ArenaAlloc(arena, sizeof(CardDeck));
+    cd->capacity = MAXCARDS;
+    cd->count = 0;
+    cd->locked = 0;
+    cd->cards = ArenaAlloc(arena, cd->capacity * sizeof(UserCard*));
+    return cd;
+}
+
+UserCard* CreateHashUserCard(M_Arena* arena, char* nickname, char* website, char* username, char* password)
+{
+    UserCard* uc = ArenaAlloc(arena, sizeof(UserCard));
+    uc->service_nickname = MStrndup(arena, nickname, strlen(nickname));
+    uc->service_website = MStrndup(arena, website, strlen(website));
+    uc->username = MStrndup(arena, username, strlen(username));
+    uc->password = MStrndup(arena, password, strlen(password));
+    uc->next = NULL;
+    return uc;
+}
+
+UserCard* CreateHashEmptyUserCard(M_Arena* arena)
+{
+    UserCard* uc = ArenaAlloc(arena, sizeof(UserCard));
+    uc->service_nickname = ArenaAlloc(arena, MAX_NICKNAME_LEN);
+    uc->service_website = ArenaAlloc(arena, MAX_WEBSITE_LEN);
+    uc->username = ArenaAlloc(arena, MAX_USERNAME_LEN);
+    uc->password = ArenaAlloc(arena, MAX_PASSWORD_LEN);
+    return uc;
+}
+
+void InsertHashUserCard(M_Arena* arena, CardDeck* cd, char* nickname, char* website, char* username, char* password)
+{
+    UserCard* uc = CreateHashUserCard(arena, nickname, website, username, password);
+    int index = GetSimpleHash(uc->service_nickname, cd->capacity, 0);
+    UserCard* cur = cd->cards[index];
+    while (cur != NULL) {
+        if (cur->next == NULL) {
+            cur->next = ArenaAlloc(arena, sizeof(UserCard*));
+            cur->next = uc;
+            return;
+        }
+        cur = cur->next;
+    }
+    cd->cards[index] = uc;
+    cd->count++;
 }

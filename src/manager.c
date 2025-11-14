@@ -37,9 +37,12 @@
 int main(void)
 {
     srand(time(NULL));
-    CardDeck* cd = createCardDeck();
+    M_Arena arena, STRS;
+    ArenaInitSized(&arena, Megabytes(4));
+    ArenaInitSized(&STRS, Kilobytes(1));
+    CardDeck* cd = CreateHashCardDeck(&arena);
     int choice;
-    char* key = malloc(64 * sizeof(char));
+    char* key = ArenaAlloc(&arena, 64 * sizeof(char));
 
     printf("\033[1;32m   _____ _____ _____     _____ _ _ _ \033[0m\n");
     printf("\033[1;32m  |   __|   __|   | |___|  _  | | | |\033[0m\n");
@@ -70,52 +73,51 @@ int main(void)
     ////////////////////
         if (choice == 1) {
 
-            UserCard* card = createEmptyUserCard();
-            uAddNewUserEntry(cd, card);
-            freeUserCard(card);
+            UserCard* card = CreateHashEmptyUserCard(&arena);
+            uAddNewUserEntry(&arena, cd, card);
 
     ////////////////////
     // 2: Find an Entry
     ////////////////////
         } else if (choice == 2) {
 
-            char* n = malloc(16 * sizeof(char));                                // ALLOC: n
+            char* n = ArenaAlloc(&STRS, MAX_NICKNAME_LEN);                                // ALLOC: n
             printf("Enter service nickname: ");
             scanf("%s", n);
-            UserCard* uc = findPassWithNickname(cd, n);
+            UserCard* uc = FindHashPassWithNickname(cd, n);
             if (uc) {
                 printf("\033[1;32m\n%s\n\033[0m    \033[1;35mu: \033[1;91m%s\n\033[0m    \033[1;35mp: \033[1;91m%s\n\033[0m\n",
                        n, uc->username, uc->password);
             } else {
                 printf("Could not find an entry for %s\n", n);
             }
-            free(n);                                                            // FREE: n
 
     ////////////////////
     // 3: Dump Table Entries
     ////////////////////
         } else if (choice == 3) {
 
-            dumpCardDeck(cd);
+            DumpHashCardDeck(cd);
 
     ////////////////////
     // 4: Lock Deck
     ////////////////////
         } else if (choice == 4) {
 
+            size_t mark = ArenaGetMarker(&STRS);
             if (cd->locked == 1) {
                 printf("Shit already locked...?\n");
             } else {
-                char* attempt = malloc(64 * sizeof(char));          // ALLOC: attempt
+                char* attempt = ArenaAlloc(&STRS, MAX_PASSWORD_LEN);          // ALLOC: attempt
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESLockDeck(cd, attempt);
+                    ArenaRestoreToMarker(&STRS, mark);
                     printf("Deck locked\n");
                 } else {
                     printf("WRONG!!!\n");
                 }
-                free(attempt);                                      // FREE: attempt
             }
 
     ////////////////////
@@ -123,19 +125,20 @@ int main(void)
     ////////////////////
         } else if (choice == 5) {
 
+            size_t mark = ArenaGetMarker(&STRS);
             if (cd->locked == 0) {
                 printf("Shit aint even locked...?\n");
             } else {
-                char* attempt = malloc(64 * sizeof(char));          // ALLOC: attempt
+                char* attempt = ArenaAlloc(&STRS, MAX_PASSWORD_LEN);          // ALLOC: attempt
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESUnlockDeck(cd, attempt);
+                    ArenaRestoreToMarker(&STRS, mark);
                     printf("Deck unlocked\n");
                 } else {
                     printf("ERROR: master key incorrect\n");
                 }
-                free(attempt);                                      // FREE: attempt
             }
 
     ////////////////////
@@ -143,36 +146,36 @@ int main(void)
     ////////////////////
         } else if (choice == 6) {
 
-            uGeneratePassword();
+            size_t mark = ArenaGetMarker(&STRS);
+            uGeneratePassword(&STRS);
+            ArenaRestoreToMarker(&STRS, mark);
 
     ////////////////////
     // 7: Save Deck
     ////////////////////
         } else if (choice == 7) {
 
-            char* filename = malloc(32 * sizeof(char));         // ALLOC: filename
+            char* filename = ArenaAlloc(&STRS, 32);         // ALLOC: filename
             printf("Enter name of file to save to: ");
             scanf("%s", filename);
             int ret = saveDeckToFile(cd, filename);
             if (ret != 0) {
                 fprintf(stderr, "error saving to file");
-                free(filename);
                 break;
             }
-            free(filename);                                     // FREE: filename
 
     ////////////////////
     // 8: Load Deck
     ////////////////////
         } else if (choice == 8) {
             
-            char* filename = malloc(32 * sizeof(char));         // ALLOC: filename
+            size_t mark = ArenaGetMarker(&STRS);
+            char* filename = ArenaAlloc(&STRS, 32);         // ALLOC: filename
             printf("Enter name of file to read from: ");
             scanf("%s", filename);
-            int ret = readDeckFromFile(cd, filename);
+            int ret = readDeckFromFile(&arena, cd, filename);
             if (ret == -1) {
                 fprintf(stderr, "error reading from file");
-                free(filename);
                 break;
             }
             if (cd->locked == 1) {
@@ -181,14 +184,14 @@ int main(void)
             } else {
                 printf("loaded deck from %s\n", filename);
             }
-            free(filename);                                     // FREE: filename
+            ArenaRestoreToMarker(&STRS, mark);
 
     ////////////////////
     // 9: Deck Info
     ////////////////////
         } else if (choice == 9) {
 
-            dumpDeckInfo(cd);
+            DumpHashCardDeckInfo(cd);
 
     ////////////////////
     // 0: QUIT
@@ -203,7 +206,7 @@ int main(void)
             break;
         }
     }
-    free(key);
-    freeCardDeck(cd);
+    ArenaFree(&arena);
+    ArenaFree(&STRS);
     return 0;
 }

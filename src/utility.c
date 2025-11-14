@@ -52,7 +52,7 @@ char* portableStrndup(char* buffer, int n)
     return p;
 }
 
-char* trimDeckFile(char* buffer, int len)
+char* trimDeckFile(M_Arena* arena, char* buffer, int len)
 {
     int start = 0;
     while (start < len && isspace((unsigned char)buffer[start])) {
@@ -62,7 +62,9 @@ char* trimDeckFile(char* buffer, int len)
     while (end > start && isspace((unsigned char)buffer[end - 1])) {
         end--;
     }
-    return portableStrndup(buffer + start, end - start);
+    return MStrndup(arena, buffer + start, end - start);
+
+    // return portableStrndup(buffer + start, end - start);
 }
 
 void StrToHex(char* in, uint8_t* out, size_t length)
@@ -72,7 +74,7 @@ void StrToHex(char* in, uint8_t* out, size_t length)
     }
 }
 
-void uAddNewUserEntry(CardDeck* deck, UserCard* card)
+void uAddNewUserEntry(M_Arena* arena, CardDeck* deck, UserCard* card)
 {
     int gen = 0, type = 0;
     int len = 16;
@@ -92,32 +94,30 @@ void uAddNewUserEntry(CardDeck* deck, UserCard* card)
         printf("Simple (1) or Dashed (2)?: ");
         scanf("%d", &type);
         if (type == 1) {
-            char* pwd = genSimplePassword(len);
-            insertUserCard(deck, card->service_nickname, card->service_website, card->username, pwd);
+            char* pwd = genSimplePassword(arena, len);
+            InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, pwd);
             printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                    card->service_nickname, card->service_website, card->username, pwd);
-            free(pwd);
         } else {
-            char* pwd = genDashedPassword(len);
-            insertUserCard(deck, card->service_nickname, card->service_website, card->username, pwd);
+            char* pwd = genDashedPassword(arena, len);
+            InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, pwd);
             printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                    card->service_nickname, card->service_website, card->username, pwd);
-            free(pwd);
         }
     } else {
         printf("Enter password: ");
         scanf(" %s", card->password);
-        insertUserCard(deck, card->service_nickname, card->service_website, card->username, card->password);
+        InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, card->password);
         printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                card->service_nickname, card->service_website, card->username, card->password);
     }
 }
 
-void uGeneratePassword(void)
+void uGeneratePassword(M_Arena* arena)
 {
     int desiredLength = 16;
     int desiredType = 0;
-    char* pwd = malloc(64 * sizeof(char));                          // ALLOC: pwd
+    // char* pwd = ArenaAlloc(arena, MAX_PASSWORD_LEN);                          // ALLOC: pwd
     printf("Enter desired length (>=16 recommended): ");
     scanf("%d", &desiredLength);
     printf("Enter 1 for simple or 2 for dashed: ");
@@ -125,14 +125,13 @@ void uGeneratePassword(void)
     if (desiredLength <= 0 || desiredLength >= 64) desiredLength = 16;
     if (desiredType == 2) {
         printf("\033[1;32m\nGenerating DASHED %d-character password...\n\033[0m", desiredLength);
-        pwd = genDashedPassword(desiredLength);
+        char* pwd = genDashedPassword(arena, desiredLength);
         printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
     } else {
         printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-        pwd = genSimplePassword(desiredLength);
+        char* pwd = genSimplePassword(arena, desiredLength);
         printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
     }
-    free(pwd);
 }
 
 

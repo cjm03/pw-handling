@@ -16,15 +16,17 @@
  * the exact same way.
 */
 
-void loadTest(CardDeck* cd);
+void loadTest(M_Arena* arena, CardDeck* cd);
 
 int main(void)
 {
     srand(time(NULL));
-    CardDeck* cd = createCardDeck();
-    loadTest(cd);
+    M_Arena arena;
+    ArenaInitSized(&arena, Megabytes(4));
+    CardDeck* cd = CreateHashCardDeck(&arena);
+    loadTest(&arena, cd);
     int choice;
-    char* key = malloc(64 * sizeof(char));
+    char* key = ArenaAlloc(&arena, 64 * sizeof(char));
 
     printf("\033[1;32m   _____ _____ _____     _____ _ _ _ \033[0m\n");
     printf("\033[1;32m  |   __|   __|   | |___|  _  | | | |\033[0m\n");
@@ -52,40 +54,9 @@ int main(void)
 
 // Add a New Entry
 /* 1 */ if (choice == 1) {
-            UserCard* card = createEmptyUserCard();                             // ALLOC: card
-            int gen = 0;
-            printf("Nickname: ");
-            scanf("%s", card->service_nickname);
-            printf("Website: ");
-            scanf(" %s", card->service_website);
-            printf("Username: ");
-            scanf(" %s", card->username);
-            printf("Generate a password? (0) or provide your own (1): ");
-            scanf(" %d", &gen);
-            if (gen == 0) {
-                int len = 16;
-                int type = 0;
-                printf("Enter desired password length: ");
-                scanf("%d", &len);
-                printf("Simple (1) or Dashed (2)?: ");
-                scanf("%d", &type);
-                if (type == 1) card->password = genSimplePassword(len);
-                else card->password = genDashedPassword(len);
-                insertUserCard(cd, card->service_nickname, card->service_website, 
-                               card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", 
-                       card->service_nickname, card->service_website, 
-                       card->username, card->password);
-            } else {
-                printf("Enter password: ");
-                scanf(" %s", card->password);
-                insertUserCard(cd, card->service_nickname, card->service_website, 
-                               card->username, card->password);
-                printf("%s:\n  website: %s\n  username: %s\n  password: %s\n", 
-                       card->service_nickname, card->service_website, 
-                       card->username, card->password);
-            }
-            freeUserCard(card);                                                 // FREE: card
+
+            UserCard* card = CreateHashEmptyUserCard(&arena);                             // ALLOC: card
+            uAddNewUserEntry(&arena, cd, card);
 
 // Find a Specific Entry
 /* 2 */ } else if (choice == 2) {
@@ -93,7 +64,7 @@ int main(void)
             char* n = malloc(16 * sizeof(char));                                // ALLOC: n
             printf("Enter service nickname: ");
             scanf("%s", n);
-            UserCard* uc = findPassWithNickname(cd, n);
+            UserCard* uc = FindHashPassWithNickname(cd, n);
 
             if (uc) {
                 printf("%s:\n  u: %s\n  p: %s\n", n, uc->username, uc->password);
@@ -105,7 +76,7 @@ int main(void)
 // Dump Table Entries
 /* 3 */ } else if (choice == 3) {
 
-            dumpCardDeck(cd);
+            DumpHashCardDeck(cd);
 
 // Lock Deck
 /* 4 */ } else if (choice == 4) {
@@ -113,16 +84,15 @@ int main(void)
             if (cd->locked == 1) {
                 printf("Shit already locked...?\n");
             } else {
-                char* attempt = malloc(64 * sizeof(char));          // ALLOC: attempt
+                char* attempt = ArenaAlloc(&arena, 64 * sizeof(char));          // ALLOC: attempt
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
-                    lockCardDeck(cd, attempt);
+                    AESLockDeck(cd, attempt);
                     printf("Deck locked\n");
                 } else {
                     printf("WRONG!!!\n");
                 }
-                free(attempt);                                      // FREE: attempt
             }
 
 // Unlock Deck
@@ -131,43 +101,21 @@ int main(void)
             if (cd->locked == 0) {
                 printf("Shit aint even locked...?\n");
             } else {
-                char* attempt = malloc(64 * sizeof(char));          // ALLOC: attempt
+                char* attempt = ArenaAlloc(&arena, 64 * sizeof(char));          // ALLOC: attempt
                 printf("Enter master key: ");
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
-                    unlockCardDeck(cd, attempt);
+                    AESUnlockDeck(cd, attempt);
                     printf("Deck unlocked\n");
                 } else {
                     printf("ERROR: master key incorrect\n");
                 }
-                free(attempt);                                      // FREE: attempt
             }
 
 // Output Generated Password
 /* 6 */ } else if (choice == 6) {
 
-            int desiredLength = 16;
-            int desiredType = 0;
-            char* pwd = malloc(64 * sizeof(char));                          // ALLOC: pwd
-            printf("Enter desired length (>=16 recommended): ");
-            scanf("%d", &desiredLength);
-            printf("Enter 1 for simple or 2 for dashed: ");
-            scanf("%d", &desiredType);
-            if (desiredLength <= 0 || desiredLength >= 64) desiredLength = 16;
-            if (desiredType == 1) {
-                printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-                pwd = genSimplePassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            } else if (desiredType == 2) {
-                printf("\033[1;32m\nGenerating DASHED %d-character password...\n\033[0m", desiredLength);
-                pwd = genDashedPassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            } else {
-                printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-                pwd = genSimplePassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            }
-            free(pwd);                                                      // FREE: pwd
+            uGeneratePassword(&arena);
 
 // Save Deck To File
 /* 7 */ } else if (choice == 7) {
@@ -189,7 +137,7 @@ int main(void)
             char* filename = malloc(32 * sizeof(char));         // ALLOC: filename
             printf("Enter name of file to read from: ");
             scanf("%s", filename);
-            int ret = readDeckFromFile(cd, filename);
+            int ret = readDeckFromFile(&arena, cd, filename);
             if (ret == -1) {
                 fprintf(stderr, "error reading from file");
                 free(filename);
@@ -205,7 +153,7 @@ int main(void)
 
         } else if (choice == 9) {
 
-            dumpDeckInfo(cd);
+            DumpHashCardDeckInfo(cd);
 
 // QUIT
 /* 0 */ } else if (choice == 0) {
@@ -218,61 +166,47 @@ int main(void)
             break;
         }
     }
-    free(key);
-    freeCardDeck(cd);
+    ArenaFree(&arena);
     return 0;
 }
 
 
-void loadTest(CardDeck* cd)
+void loadTest(M_Arena* arena, CardDeck* cd)
 {
+    M_Arena load;
+    ArenaInitSized(&load, MAX_PASSWORD_LEN * MAX_PASSWORD_LEN);
     int len = 32;
-    char* apwd = genSimplePassword(len);
-    char* bpwd = genDashedPassword(len);
-    char* cpwd = genSimplePassword(len);
-    char* dpwd = genDashedPassword(len);
-    char* epwd = genSimplePassword(len);
-    char* fpwd = genDashedPassword(len);
-    char* gpwd = genSimplePassword(len);
-    char* hpwd = genDashedPassword(len);
-    char* ipwd = genSimplePassword(len);
-    char* jpwd = genDashedPassword(len);
-    char* kpwd = genSimplePassword(len);
-    char* lpwd = genDashedPassword(len);
-    char* mpwd = genSimplePassword(len);
-    char* npwd = genDashedPassword(len);
-    char* opwd = genSimplePassword(len);
-    char* ppwd = genDashedPassword(len);
-    insertUserCard(cd, "apple",     "www.apple.com",    "alex123",       apwd);
-    insertUserCard(cd, "boeing",    "www.boeing.com",   "bethanyx0",     bpwd);
-    insertUserCard(cd, "comcast",   "www.comcast.com",  "crab",          cpwd);
-    insertUserCard(cd, "dingledog", "www.ddog.com",     "d00by",         dpwd);
-    insertUserCard(cd, "elepo",     "www.elepo.com",    "xelden1",       epwd);
-    insertUserCard(cd, "frockling", "www.frockling.com","felix2",        fpwd);
-    insertUserCard(cd, "github",    "www.github.com",   "go0b13",        gpwd);
-    insertUserCard(cd, "hackle",    "www.htb.com",      "henry1x",       hpwd);
-    insertUserCard(cd, "iosevka",   "www.iosevka.com",  "ingr1dx",       ipwd);
-    insertUserCard(cd, "jackal",    "www.jackal.com",   "jack455",       jpwd);
-    insertUserCard(cd, "kernel",    "www.kernel.com",   "k3rn3l3nj0y3r", kpwd);
-    insertUserCard(cd, "lalo",      "www.lalo.com",     "linguine",      lpwd);
-    insertUserCard(cd, "minecraft", "www.minecraft.com","mexican4",      mpwd);
-    insertUserCard(cd, "netflix",   "www.netflix.com",  "na1v3",         npwd);
-    insertUserCard(cd, "ollama",    "www.ollama.com",   "os1nt",         opwd);
-    insertUserCard(cd, "penis",     "www.penis.com",    "pickel",        ppwd);
-    free(apwd);
-    free(bpwd);
-    free(cpwd);
-    free(dpwd);
-    free(epwd);
-    free(fpwd);
-    free(gpwd);
-    free(hpwd);
-    free(ipwd);
-    free(jpwd);
-    free(kpwd);
-    free(lpwd);
-    free(mpwd);
-    free(npwd);
-    free(opwd);
-    free(ppwd);
+    char* apwd = genSimplePassword(&load, len);
+    char* bpwd = genDashedPassword(&load, len);
+    char* cpwd = genSimplePassword(&load, len);
+    char* dpwd = genDashedPassword(&load, len);
+    char* epwd = genSimplePassword(&load, len);
+    char* fpwd = genDashedPassword(&load, len);
+    char* gpwd = genSimplePassword(&load, len);
+    char* hpwd = genDashedPassword(&load, len);
+    char* ipwd = genSimplePassword(&load, len);
+    char* jpwd = genDashedPassword(&load, len);
+    char* kpwd = genSimplePassword(&load, len);
+    char* lpwd = genDashedPassword(&load, len);
+    char* mpwd = genSimplePassword(&load, len);
+    char* npwd = genDashedPassword(&load, len);
+    char* opwd = genSimplePassword(&load, len);
+    char* ppwd = genDashedPassword(&load, len);
+    InsertHashUserCard(arena, cd, "apple",     "www.apple.com",    "alex123",       apwd);
+    InsertHashUserCard(arena, cd, "boeing",    "www.boeing.com",   "bethanyx0",     bpwd);
+    InsertHashUserCard(arena, cd, "comcast",   "www.comcast.com",  "crab",          cpwd);
+    InsertHashUserCard(arena, cd, "dingledog", "www.ddog.com",     "d00by",         dpwd);
+    InsertHashUserCard(arena, cd, "elepo",     "www.elepo.com",    "xelden1",       epwd);
+    InsertHashUserCard(arena, cd, "frockling", "www.frockling.com","felix2",        fpwd);
+    InsertHashUserCard(arena, cd, "github",    "www.github.com",   "go0b13",        gpwd);
+    InsertHashUserCard(arena, cd, "hackle",    "www.htb.com",      "henry1x",       hpwd);
+    InsertHashUserCard(arena, cd, "iosevka",   "www.iosevka.com",  "ingr1dx",       ipwd);
+    InsertHashUserCard(arena, cd, "jackal",    "www.jackal.com",   "jack455",       jpwd);
+    InsertHashUserCard(arena, cd, "kernel",    "www.kernel.com",   "k3rn3l3nj0y3r", kpwd);
+    InsertHashUserCard(arena, cd, "lalo",      "www.lalo.com",     "linguine",      lpwd);
+    InsertHashUserCard(arena, cd, "minecraft", "www.minecraft.com","mexican4",      mpwd);
+    InsertHashUserCard(arena, cd, "netflix",   "www.netflix.com",  "na1v3",         npwd);
+    InsertHashUserCard(arena, cd, "ollama",    "www.ollama.com",   "os1nt",         opwd);
+    InsertHashUserCard(arena, cd, "penis",     "www.penis.com",    "pickel",        ppwd);
+    ArenaFree(&load);
 }

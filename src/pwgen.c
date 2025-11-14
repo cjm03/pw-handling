@@ -12,6 +12,8 @@
 #include <openssl/evp.h>
 #include <openssl/bio.h>
 
+#include "../external/allhead.h"
+
 
 char genCharacter(void)
 {
@@ -27,9 +29,9 @@ char genCharacterForDashed(void)
     return all[first];
 }
 
-char* genSimplePassword(int len)
+char* genSimplePassword(M_Arena* arena, int len)
 {
-    char* pwd = malloc(len * sizeof(char) + 1);
+    char* pwd = ArenaAlloc(arena, len * sizeof(char) + 1);
     if (!pwd) {
         fprintf(stderr, "error: could not allocate for simple pwd\n");
         exit(EXIT_FAILURE);
@@ -41,10 +43,10 @@ char* genSimplePassword(int len)
     return pwd;
 }
 
-char* genDashedPassword(int len)
+char* genDashedPassword(M_Arena* arena, int len)
 {
     int cut = len - ((len - 6) % 7);
-    char* pwd = malloc(cut * sizeof(char) + 1);
+    char* pwd = ArenaAlloc(arena, cut * sizeof(char) + 1);
     if (!pwd) {
         fprintf(stderr, "error: could not allocate for simple pwd\n");
         exit(EXIT_FAILURE);
