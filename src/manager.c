@@ -77,30 +77,29 @@ int main(void)
             size_t cmark = ArenaGetMarker(&STRS);
             printf("%zu\n", cmark);
             UserCard* card = CreateHashEmptyUserCard(&STRS);
-            size_t emark = ArenaGetMarker(&arena);
-            printf("%zu\n", emark);
             uAddNewUserEntry(&arena, cd, card);
             printf("offset prior: %zu\n", STRS.offset);
             ArenaRestoreToMarker(&STRS, cmark);
             printf("offset after: %zu\n", STRS.offset);
-            emark = ArenaGetMarker(&arena);
-            printf("%zu\n", emark);
 
     ////////////////////
     // 2: Find an Entry
     ////////////////////
         } else if (choice == 2) {
 
+            size_t fmark = ArenaGetMarker(&STRS);
             char* n = ArenaAlloc(&STRS, MAX_NICKNAME_LEN);                                // ALLOC: n
             printf("Enter service nickname: ");
             scanf("%s", n);
-            UserCard* uc = FindHashPassWithNickname(cd, n);
+            UserCard* uc = CreateHashEmptyUserCard(&STRS);
+            uc = FindHashPassWithNickname(cd, n);
             if (uc) {
                 printf("\033[1;32m\n%s\n\033[0m    \033[1;35mu: \033[1;91m%s\n\033[0m    \033[1;35mp: \033[1;91m%s\n\033[0m\n",
                        n, uc->username, uc->password);
             } else {
                 printf("Could not find an entry for %s\n", n);
             }
+            ArenaRestoreToMarker(&STRS, fmark);
 
     ////////////////////
     // 3: Dump Table Entries

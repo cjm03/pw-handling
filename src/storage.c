@@ -12,7 +12,7 @@
 #include "../external/aes.h"
 #include "../external/allhead.h"
 
-static UserCard DELETEDCARD = { NULL, NULL, NULL, NULL, NULL, 0};
+// static UserCard DELETEDCARD = { NULL, NULL, NULL, NULL, NULL, 0};
 
 void DumpHashCardDeck(CardDeck* cd)
 {
@@ -166,8 +166,9 @@ int readDeckFromFile(M_Arena* arena, CardDeck* cd, char* filename)
 UserCard* FindHashPassWithNickname(CardDeck* cd, char* nickname)
 {
     int index = GetSimpleHash(nickname, cd->capacity, 0);
+    UserCard* prev = NULL;
     UserCard* cur = cd->cards[index];
-    if (cur->service_nickname == NULL) return NULL;
+    if (cur == NULL) return prev;
     while (cur != NULL) {
         printf("cur->nick: %s\n", cur->service_nickname);
         if (strcmp(cur->service_nickname, nickname) == 0) {
@@ -176,71 +177,24 @@ UserCard* FindHashPassWithNickname(CardDeck* cd, char* nickname)
         cur = cur->next;
     }
     return NULL;
-    // if (cur == NULL) return NULL;
-    // if (strcmp(cur->service_nickname, nickname) == 0) {
-    //     return cur;
-    // } else if (cur->next != NULL) {
-    //     while (cur->next != NULL) {
-    //         cur = cur->next;
-    //         if (strcmp(cur->service_nickname, nickname) == 0) {
-    //             return cur;
-    //         }
-    //     }
-    // }
-    // return NULL;
 }
 
 int DeleteHashCard(CardDeck* cd, char* nickname)
 {
-    // UserCard* uc = FindHashPassWithNickname(cd, nickname);
-    // if (uc == NULL) {
-    //     printf("[%s] wasn't found\n", nickname);
-    //     return 0;
-    // }
     int index = GetSimpleHash(nickname, cd->capacity, 0);
+    UserCard* prev = NULL;
     UserCard* cur = cd->cards[index];
-    while (cur != NULL) {
-        if (cur != &DELETEDCARD) {
-            if (strcmp(cur->service_nickname, nickname) == 0) {
-                memset(cur->service_nickname, 0, MAX_NICKNAME_LEN);
-                memset(cur->service_website, 0, MAX_WEBSITE_LEN);
-                memset(cur->username, 0, MAX_USERNAME_LEN);
-                memset(cur->password, 0, MAX_PASSWORD_LEN);
-                cd->cards[index] = &DELETEDCARD;
-                // uc->service_nickname = NULL;
-                // uc->service_website = NULL;
-                // uc->username = NULL;
-                // uc->password = NULL;
-                // uc->next = NULL;
-                cd->count--;
-                return 1;
-            }
+    while (cur) {
+        if (strcmp(cur->service_nickname, nickname) == 0) {
+            // ----------- unlink the node ----------------
+            if (prev) prev->next = cur->next;
+            else cd->cards[index] = prev;
+            // else cd->cards[index] = cur->next;
+            cd->count--;
+            return 1;
         }
-        if (strcmp(cur->next->service_nickname, nickname) == 0) {
-            UserCard* t = cur->next;
-            if (t->next == NULL) {
-                cur->next = t->next;
-            } else {
-                cur->next = NULL;
-            }
-            t = &DELETEDCARD;
-        }
+        prev = cur;
         cur = cur->next;
-        // } else {
-        //     while (cur->next != NULL) {
-        //         if (strcmp(uc->service_nickname, cur->next->service_nickname) == 0) {
-        //             cur->next = uc->next;
-        //             uc->service_nickname = NULL;
-        //             uc->service_website = NULL;
-        //             uc->username = NULL;
-        //             uc->password = NULL;
-        //             uc->next = NULL;
-        //             cd->count--;
-        //             return 1;
-        //         }
-        //         cur = cur->next;
-        //     }
-        // }
     }
     return 0;
 }
@@ -349,20 +303,39 @@ void InsertHashUserCard(M_Arena* arena, CardDeck* cd, char* nickname, char* webs
     int index = GetSimpleHash(uc->service_nickname, cd->capacity, 0);
     UserCard* cur = cd->cards[index];
     int cnt = 1;
-    while (cur != NULL) {
-        if (cur != &DELETEDCARD) {
+    while (cur) {
+        if (strcmp(cur->service_nickname, nickname) == 0) {
             if (cur->next == NULL) {
-                cur->next = ArenaAlloc(arena, sizeof(UserCard*));
                 cur->next = uc;
                 uc->before = cnt;
-                cd->count++;
                 return;
             }
         }
         cur = cur->next;
-        cnt++;
     }
     cd->cards[index] = uc;
     uc->next = NULL;
     cd->count++;
 }
+//     while (cur != NULL) {
+//         if (cur != &DELETEDCARD) {
+//             if (cur->next == NULL) {
+//                 cur->next = ArenaAlloc(arena, sizeof(UserCard*));
+//                 cur->next = uc;
+//                 uc->before = cnt;
+//                 cd->count++;
+//                 return;
+//             }
+//         }
+//         cur = cur->next;
+//         cnt++;
+//     }
+//     cd->cards[index] = uc;
+//     uc->next = NULL;
+//     cd->count++;
+// }
+      
+      
+      
+      
+      
