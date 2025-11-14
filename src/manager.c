@@ -4,6 +4,7 @@
 #include <time.h>
 #include "central.h"
 
+
 /* 
  * Program starts by initializing a "Deck" responsible for storing "Cards" containing the data i'm trying to manage. 
  * Next the user must enter a master key which is used to encrypt/decrypt the passwords stored in the cards.
@@ -70,47 +71,7 @@ int main(void)
         if (choice == 1) {
 
             UserCard* card = createEmptyUserCard();
-            int gen = 0;
-            printf("Nickname: ");
-            scanf("%s", card->service_nickname);
-            printf("Website: ");
-            scanf(" %s", card->service_website);
-            printf("Username: ");
-            scanf(" %s", card->username);
-            printf("Generate a password? (0) or provide your own (1): ");
-            scanf(" %d", &gen);
-            if (gen == 0) {
-                int len = 16;
-                int type = 0;
-                printf("Enter desired password length: ");
-                scanf("%d", &len);
-                printf("Simple (1) or Dashed (2)?: ");
-                scanf("%d", &type);
-                if (type == 1) {
-                    char* pwd = genSimplePassword(len);
-                    insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
-                    // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
-                    printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
-                           card->service_nickname, card->service_website, card->username, pwd);
-                    free(pwd);
-                } else {
-                    char* pwd = genDashedPassword(len);
-                    insertUserCard(cd, card->service_nickname, card->service_website, card->username, pwd);
-                    printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
-                           card->service_nickname, card->service_website, card->username, pwd);
-                    free(pwd);
-                }
-                // insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
-                //        card->service_nickname, card->service_website, card->username, pwd);
-            } else {
-                printf("Enter password: ");
-                scanf(" %s", card->password);
-                insertUserCard(cd, card->service_nickname, card->service_website, card->username, card->password);
-                // printf("%s:\n  website: %s\n  username: %s\n  password: %s\n",
-                printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
-                       card->service_nickname, card->service_website, card->username, card->password);
-            }
+            uAddNewUserEntry(cd, card);
             freeUserCard(card);
 
     ////////////////////
@@ -123,11 +84,8 @@ int main(void)
             scanf("%s", n);
             UserCard* uc = findPassWithNickname(cd, n);
             if (uc) {
-                // printf("%s:\n  u: %s\n  p: %s\n",
-                //        n, uc->username, uc->password);
-                printf("\033[1;32m\n%s\n\033[0m", n);
-                printf("    \033[1;35mu: \033[1;91m%s\n\033[0m", uc->username);
-                printf("    \033[1;35mp: \033[1;91m%s\n\033[0m\n", uc->password);
+                printf("\033[1;32m\n%s\n\033[0m    \033[1;35mu: \033[1;91m%s\n\033[0m    \033[1;35mp: \033[1;91m%s\n\033[0m\n",
+                       n, uc->username, uc->password);
             } else {
                 printf("Could not find an entry for %s\n", n);
             }
@@ -153,7 +111,6 @@ int main(void)
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESLockDeck(cd, attempt);
-                    // lockCardDeck(cd, attempt);
                     printf("Deck locked\n");
                 } else {
                     printf("WRONG!!!\n");
@@ -174,7 +131,6 @@ int main(void)
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESUnlockDeck(cd, attempt);
-                    // unlockCardDeck(cd, attempt);
                     printf("Deck unlocked\n");
                 } else {
                     printf("ERROR: master key incorrect\n");
@@ -187,24 +143,7 @@ int main(void)
     ////////////////////
         } else if (choice == 6) {
 
-            int desiredLength = 16;
-            int desiredType = 0;
-            char* pwd = malloc(64 * sizeof(char));                          // ALLOC: pwd
-            printf("Enter desired length (>=16 recommended): ");
-            scanf("%d", &desiredLength);
-            printf("Enter 1 for simple or 2 for dashed: ");
-            scanf("%d", &desiredType);
-            if (desiredLength <= 0 || desiredLength >= 64) desiredLength = 16;
-            if (desiredType == 2) {
-                printf("\033[1;32m\nGenerating DASHED %d-character password...\n\033[0m", desiredLength);
-                pwd = genDashedPassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            } else {
-                printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-                pwd = genSimplePassword(desiredLength);
-                printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
-            }
-            free(pwd);                                                      // FREE: pwd
+            uGeneratePassword();
 
     ////////////////////
     // 7: Save Deck
@@ -244,6 +183,9 @@ int main(void)
             }
             free(filename);                                     // FREE: filename
 
+    ////////////////////
+    // 9: Deck Info
+    ////////////////////
         } else if (choice == 9) {
 
             dumpDeckInfo(cd);

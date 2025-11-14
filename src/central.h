@@ -108,4 +108,8 @@ char* trimDeckFile(char* buffer, int len);
 // iterate through each character in IN, cast it to uint8_t, assign it to the matching index in OUT
 void StrToHex(char* in, uint8_t* out, size_t length);
 
+void uAddNewUserEntry(CardDeck* deck, UserCard* card);
+
+void uGeneratePassword(void);
+
 #endif // CENTRAL_H
