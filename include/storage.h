@@ -26,25 +26,27 @@ typedef struct CardDeck {
     UserCard** cards;
 } CardDeck;
 
-int saveDeckToFile(CardDeck* cd, char* filename);
-
-int readDeckFromFile(M_Arena* arena, CardDeck* cd, char* filename);
-
-void AESLockDeck(CardDeck* cd, char* key);
-
-void AESUnlockDeck(CardDeck* cd, char* key);
+void    DumpHashCardDeck(CardDeck* cd);
+void    DumpHashCardDeckInfo(CardDeck* cd);
+int     saveDeckToFile(CardDeck* cd, char* filename);
+int     readDeckFromFile(CardDeck* cd, char* filename);
+UserCard*   FindHashPassWithNickname(CardDeck* cd, char* nickname);
+void    AESLockDeck(CardDeck* cd, char* key);
+void    AESUnlockDeck(CardDeck* cd, char* key);
+char*   MStrndup(M_Arena* arena, char* data, size_t n);
+int     SimpleHash(const char* identifier, const int prime, const int mod);
+int     GetSimpleHash(const char* identifier, const int mod, const int attempt);
+CardDeck*   CreateHashCardDeck(void);
+UserCard*   CreateHashUserCard(char* nickname, char* website, char* username, char* password);
+UserCard*   CreateHashEmptyUserCard(void);
+UserCard*   M_CreateHashEmptyUserCard(M_Arena* arena);
+void    InsertHashUserCard(CardDeck* cd, char* nickname, char* website, char* username, char* password);
+void    InsertPremadeUserCard(CardDeck* cd, UserCard* card);
+int     DeleteHashCard(CardDeck* cd, char* nickname);
+void    FreeHashDeck(CardDeck* cd);
+void    FreeCard(UserCard* uc);
 
 // HASH
 
-char* MStrndup(M_Arena* arena, char* data, size_t n);
-int SimpleHash(const char* identifier, const int prime, const int mod);
-int GetSimpleHash(const char* identifier, const int mod, const int attempt);
-CardDeck* CreateHashCardDeck(M_Arena* arena);
-UserCard* CreateHashUserCard(M_Arena* arena, char* nickname, char* website, char* username, char* password);
-UserCard* CreateHashEmptyUserCard(M_Arena* arena);
-void InsertHashUserCard(M_Arena* arena, CardDeck* cd, char* nickname, char* website, char* username, char* password);
-void DumpHashCardDeck(CardDeck* cd);
-void DumpHashCardDeckInfo(CardDeck* cd);
-UserCard* FindHashPassWithNickname(CardDeck* cd, char* nickname);
 
 #endif // STORAGE_H

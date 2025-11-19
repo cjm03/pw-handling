@@ -29,9 +29,9 @@ char genCharacterForDashed(void)
     return all[first];
 }
 
-char* genSimplePassword(M_Arena* arena, int len)
+char* genSimplePassword(int len)
 {
-    char* pwd = ArenaAlloc(arena, len * sizeof(char) + 1);
+    char* pwd = malloc(len * sizeof(char) + 1);
     if (!pwd) {
         fprintf(stderr, "error: could not allocate for simple pwd\n");
         exit(EXIT_FAILURE);
@@ -43,10 +43,10 @@ char* genSimplePassword(M_Arena* arena, int len)
     return pwd;
 }
 
-char* genDashedPassword(M_Arena* arena, int len)
+char* genDashedPassword(int len)
 {
     int cut = len - ((len - 6) % 7);
-    char* pwd = ArenaAlloc(arena, cut * sizeof(char) + 1);
+    char* pwd = malloc(cut * sizeof(char) + 1);
     if (!pwd) {
         fprintf(stderr, "error: could not allocate for simple pwd\n");
         exit(EXIT_FAILURE);

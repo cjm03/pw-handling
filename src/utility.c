@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +53,7 @@ char* portableStrndup(char* buffer, int n)
     return p;
 }
 
-char* trimDeckFile(M_Arena* arena, char* buffer, int len)
+char* trimDeckFile(char* buffer, int len)
 {
     int start = 0;
     while (start < len && isspace((unsigned char)buffer[start])) {
@@ -62,7 +63,7 @@ char* trimDeckFile(M_Arena* arena, char* buffer, int len)
     while (end > start && isspace((unsigned char)buffer[end - 1])) {
         end--;
     }
-    return MStrndup(arena, buffer + start, end - start);
+    return portableStrndup(buffer + start, end - start);
 
     // return portableStrndup(buffer + start, end - start);
 }
@@ -74,8 +75,9 @@ void StrToHex(char* in, uint8_t* out, size_t length)
     }
 }
 
-void uAddNewUserEntry(M_Arena* arena, CardDeck* deck, UserCard* card)
+void uAddNewUserEntry(CardDeck* deck)
 {
+    UserCard* card = CreateHashEmptyUserCard();
     int gen = 0, type = 0;
     int len = 16;
 
@@ -94,26 +96,32 @@ void uAddNewUserEntry(M_Arena* arena, CardDeck* deck, UserCard* card)
         printf("Simple (1) or Dashed (2)?: ");
         scanf("%d", &type);
         if (type == 1) {
-            char* pwd = genSimplePassword(arena, len);
-            InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, pwd);
+            card->password = genSimplePassword(len);
+            InsertPremadeUserCard(deck, card);
+            // char* pwd = genSimplePassword(len);
+            // InsertHashUserCard(deck, card->service_nickname, card->service_website, card->username, pwd);
             printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
-                   card->service_nickname, card->service_website, card->username, pwd);
+                   card->service_nickname, card->service_website, card->username, card->password);
+            // free(pwd);
         } else {
-            char* pwd = genDashedPassword(arena, len);
-            InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, pwd);
+            card->password = genDashedPassword(len);
+            InsertPremadeUserCard(deck, card);
+            // char* pwd = genDashedPassword(len);
+            // InsertHashUserCard(deck, card->service_nickname, card->service_website, card->username, pwd);
             printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
-                   card->service_nickname, card->service_website, card->username, pwd);
+                   card->service_nickname, card->service_website, card->username, card->password);
+            // free(pwd);
         }
     } else {
         printf("Enter password: ");
         scanf(" %s", card->password);
-        InsertHashUserCard(arena, deck, card->service_nickname, card->service_website, card->username, card->password);
+        InsertHashUserCard(deck, card->service_nickname, card->service_website, card->username, card->password);
         printf("\033[1;32m%s:\n  \033[1;35mwebsite: \033[1;91m%s\n  \033[1;35musername: \033[1;91m%s\n  \033[1;35mpassword: \033[1;91m%s\n\033[0m",
                card->service_nickname, card->service_website, card->username, card->password);
     }
 }
 
-void uGeneratePassword(M_Arena* arena)
+void uGeneratePassword(void)
 {
     int desiredLength = 16;
     int desiredType = 0;
@@ -125,16 +133,33 @@ void uGeneratePassword(M_Arena* arena)
     if (desiredLength <= 0 || desiredLength >= 64) desiredLength = 16;
     if (desiredType == 2) {
         printf("\033[1;32m\nGenerating DASHED %d-character password...\n\033[0m", desiredLength);
-        char* pwd = genDashedPassword(arena, desiredLength);
+        char* pwd = genDashedPassword(desiredLength);
         printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
     } else {
         printf("\033[1;32m\nGenerating SIMPLE %d-character password...\n\033[0m", desiredLength);
-        char* pwd = genSimplePassword(arena, desiredLength);
+        char* pwd = genSimplePassword(desiredLength);
         printf("\n    \033[1;35mResult: \033[1;91m%s\n\033[0m\n", pwd);
     }
 }
 
-
+char* GETSTRING(void)
+{
+    size_t size = 16;
+    char* str;
+    int ch;
+    size_t len = 0;
+    str = realloc(NULL, sizeof(char) * size);
+    if (!str) return str;
+    while (EOF != (ch = fgetc(stdin)) && ch != '\n') {
+        str[len++] = ch;
+        if (len == size) {
+            str = realloc(str, sizeof(char) * (size += 16));
+            if (!str) return str;
+        }
+    }
+    str[len++] = '\0';
+    return realloc(str, sizeof(char) * len);
+}
 
 
 

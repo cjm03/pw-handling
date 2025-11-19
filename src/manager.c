@@ -37,12 +37,11 @@
 int main(void)
 {
     srand(time(NULL));
-    M_Arena arena, STRS;
-    ArenaInitSized(&arena, Megabytes(4));
-    ArenaInitSized(&STRS, Kilobytes(1));
-    CardDeck* cd = CreateHashCardDeck(&arena);
+    M_Arena STRS;
+    ArenaInitSized(&STRS, Kilobytes(4));
+    CardDeck* cd = CreateHashCardDeck();
     int choice;
-    char* key = ArenaAlloc(&arena, 64 * sizeof(char));
+    char* key = malloc(64 * sizeof(char));
 
     printf("\033[1;32m   _____ _____ _____     _____ _ _ _ \033[0m\n");
     printf("\033[1;32m  |   __|   __|   | |___|  _  | | | |\033[0m\n");
@@ -52,20 +51,22 @@ int main(void)
     printf("No deck loaded. Initialize the key and begin adding entries or load a deck\n");
     printf("Initialize the master key (48-63 chars): ");
     scanf("%s", key);
+    printf("\n");
 
 
     while (1) {
-        printf("\nOptions:\n");
-        printf("    1. Add new entry\n");
-        printf("    2. Find a password\n");
-        printf("    3. Dump the entries\n");
-        printf("    4. Lock the deck\n");
-        printf("    5. Unlock the deck\n");
-        printf("    6. Delete an entry\n");
-        printf("    7. Save the deck to a file\n");
-        printf("    8. Load a deck from a file\n");
-        printf("    9. Unload a deck from Memory\n");
-        printf("    0. Quit\n\n");
+        // char* command = GETSTRING();
+        printf("\n===Options===\n");
+        printf("1. Add new entry\n");
+        printf("2. Find a password\n");
+        printf("3. Dump the entries\n");
+        printf("4. Lock the deck\n");
+        printf("5. Unlock the deck\n");
+        printf("6. Delete an entry\n");
+        printf("7. Save the deck to a file\n");
+        printf("8. Load a deck from a file\n");
+        printf("9. Unload a deck from Memory\n");
+        printf("0. Quit\n\n");
         printf("> ");
         scanf("%d", &choice);
 
@@ -74,24 +75,17 @@ int main(void)
     ////////////////////
         if (choice == 1) {
 
-            size_t cmark = ArenaGetMarker(&STRS);
-            printf("%zu\n", cmark);
-            UserCard* card = CreateHashEmptyUserCard(&STRS);
-            uAddNewUserEntry(&arena, cd, card);
-            printf("offset prior: %zu\n", STRS.offset);
-            ArenaRestoreToMarker(&STRS, cmark);
-            printf("offset after: %zu\n", STRS.offset);
+            uAddNewUserEntry(cd);
 
     ////////////////////
     // 2: Find an Entry
     ////////////////////
         } else if (choice == 2) {
 
-            size_t fmark = ArenaGetMarker(&STRS);
             char* n = ArenaAlloc(&STRS, MAX_NICKNAME_LEN);                                // ALLOC: n
             printf("Enter service nickname: ");
             scanf("%s", n);
-            UserCard* uc = CreateHashEmptyUserCard(&STRS);
+            UserCard* uc = NULL;
             uc = FindHashPassWithNickname(cd, n);
             if (uc) {
                 printf("\033[1;32m\n%s\n\033[0m    \033[1;35mu: \033[1;91m%s\n\033[0m    \033[1;35mp: \033[1;91m%s\n\033[0m\n",
@@ -99,7 +93,6 @@ int main(void)
             } else {
                 printf("Could not find an entry for %s\n", n);
             }
-            ArenaRestoreToMarker(&STRS, fmark);
 
     ////////////////////
     // 3: Dump Table Entries
@@ -114,7 +107,6 @@ int main(void)
     ////////////////////
         } else if (choice == 4) {
 
-            size_t mark = ArenaGetMarker(&STRS);
             if (cd->locked == 1) {
                 printf("Shit already locked...?\n");
             } else {
@@ -123,7 +115,6 @@ int main(void)
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESLockDeck(cd, attempt);
-                    ArenaRestoreToMarker(&STRS, mark);
                     printf("Deck locked\n");
                 } else {
                     printf("WRONG!!!\n");
@@ -135,7 +126,6 @@ int main(void)
     ////////////////////
         } else if (choice == 5) {
 
-            size_t mark = ArenaGetMarker(&STRS);
             if (cd->locked == 0) {
                 printf("Shit aint even locked...?\n");
             } else {
@@ -144,7 +134,6 @@ int main(void)
                 scanf("%s", attempt);
                 if (strcmp(key, attempt) == 0) {
                     AESUnlockDeck(cd, attempt);
-                    ArenaRestoreToMarker(&STRS, mark);
                     printf("Deck unlocked\n");
                 } else {
                     printf("ERROR: master key incorrect\n");
@@ -156,13 +145,11 @@ int main(void)
     ////////////////////
         } else if (choice == 6) {
 
-            size_t mark = ArenaGetMarker(&STRS);
             char* todelete = ArenaAlloc(&STRS, MAX_NICKNAME_LEN);
             printf("Enter nickname of entry to delete: ");
             scanf("%s", todelete);
             int ret = DeleteHashCard(cd, todelete);
             if (ret == 1) printf("NULLED [%s]\n", todelete);
-            ArenaRestoreToMarker(&STRS, mark);
 
     ////////////////////
     // 7: Save Deck
@@ -183,11 +170,10 @@ int main(void)
     ////////////////////
         } else if (choice == 8) {
             
-            size_t mark = ArenaGetMarker(&STRS);
             char* filename = ArenaAlloc(&STRS, 32);         // ALLOC: filename
             printf("Enter name of file to read from: ");
             scanf("%s", filename);
-            int ret = readDeckFromFile(&arena, cd, filename);
+            int ret = readDeckFromFile(cd, filename);
             if (ret == -1) {
                 fprintf(stderr, "error reading from file");
                 break;
@@ -198,14 +184,12 @@ int main(void)
             } else {
                 printf("loaded deck from %s\n", filename);
             }
-            ArenaRestoreToMarker(&STRS, mark);
 
     ////////////////////
     // 9: Unload Deck 
     ////////////////////
         } else if (choice == 9) {
 
-            ArenaClear(&arena);
             ArenaClear(&STRS);
 
     ////////////////////
@@ -221,7 +205,8 @@ int main(void)
             break;
         }
     }
-    ArenaFree(&arena);
+    FreeHashDeck(cd);
+    free(key);
     ArenaFree(&STRS);
     return 0;
 }

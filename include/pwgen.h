@@ -3,11 +3,11 @@
 
 #include "../external/allhead.h"
 
-int genSalt(unsigned char* buffer, int bytes);
 char genCharacter(void);
-char* genDashedPassword(M_Arena* arena, int len);
-char* genSimplePassword(M_Arena* arena, int len);
 char genCharacterForDashed(void);
+char* genSimplePassword(int len);
+char* genDashedPassword(int len);
+int genSalt(unsigned char* buffer, int bytes);
 int sha256(char* pwd);
 
 
