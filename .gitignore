@@ -4,6 +4,7 @@ pwm
 .clangd
 store.txt
 *.txt
+*.enc
 bak-storage.c
 store.txt
 store.txt.enc

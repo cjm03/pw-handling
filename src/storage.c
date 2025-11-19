@@ -11,6 +11,7 @@
 #include "central.h"
 #include "../external/aes.h"
 #include "../external/allhead.h"
+#include "../external/chacha.h"
 
 static UserCard DELETEDCARD = { NULL, NULL, NULL, NULL };
 
@@ -135,6 +136,7 @@ int readDeckFromFile(CardDeck* cd, char* filename)
             if (!fields[f]) ok = 0;
             i++;
         }
+        printf("\nPRE | 0: %s 1: %s 2: %s\n", fields[0], fields[1], fields[2]);
         if (!ok) {
             for (int k = 0; k < 4; ++k) {
                 free(fields[k]);
@@ -161,6 +163,7 @@ int readDeckFromFile(CardDeck* cd, char* filename)
         i++;
         while (i < filesize && isspace((unsigned char)buffer[i])) i++;
         if (i < filesize && buffer[i] == ',') i++;
+        printf("POST | 0: %s 1: %s 2: %s 3: %s\n", fields[0], fields[1], fields[2], fields[3]);
         InsertHashUserCard(cd, fields[0], fields[1], fields[2], fields[3]);
         for (int k = 0; k < 4; k++) free(fields[k]);
     }
@@ -196,18 +199,39 @@ void AESLockDeck(CardDeck* cd, char* key)
 {
     uint8_t nkey[strlen(key)];
     StrToHex(key, nkey, strlen(key));
-    struct AES_ctx ctx;
-    AES_init_ctx(&ctx, nkey);
+    uint8_t nonce[12] = {0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00};
+    uint32_t counter = 0;
     for (int i = 0; i < cd->capacity; i++) {
+        Context Context;
         UserCard* cur = cd->cards[i];
         if (cur != NULL) {
             if (cur != &DELETEDCARD) {
-                if (strlen(cur->password) > 4) {
-                    AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
-                }
+                uint8_t new[strlen(cur->password)];
+                StrToHex(cur->password, new, strlen(cur->password));
+                CHACHA20_CONTEXT_INIT(&Context, nkey, nonce, counter, sizeof(new));
+                CHACHA20_XOR(&Context, new, sizeof(new));
+                PRINTSERIALIZED(Context.buffer, sizeof(new));
+                free(cur->password);
+                cur->password = portableStrndup((char*)Context.buffer, sizeof(new));
+                free(Context.keystream);
+                free(Context.buffer);
             }
         }
     }
+    // uint8_t nkey[strlen(key)];
+    // StrToHex(key, nkey, strlen(key));
+    // struct AES_ctx ctx;
+    // AES_init_ctx(&ctx, nkey);
+    // for (int i = 0; i < cd->capacity; i++) {
+    //     UserCard* cur = cd->cards[i];
+    //     if (cur != NULL) {
+    //         if (cur != &DELETEDCARD) {
+    //             if (strlen(cur->password) > 4) {
+    //                 AES_ECB_encrypt(&ctx, (unsigned char*)cur->password);
+    //             }
+    //         }
+    //     }
+    // }
     cd->locked = 1;
 }
 

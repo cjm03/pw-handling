@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-g -O2 -Wall -pedantic -I/include -lssl -lcrypto -lm -L./external -l:libcrabc.a -std=c99
 TARGET=pwm
 SRC=src/manager.c src/pwgen.c src/storage.c src/utility.c
-EXTERNAL=external/aes.c
+EXTERNAL=external/aes.c external/chacha.c
 
 #Default Target
 all: clean build
